@@ -98,6 +98,7 @@ private:
         doc["ble"]         = BLEScanner::get().running;
         doc["radio2"]      = Radio2::get().available;
         doc["packets"]     = Sniffer::get().packetCount;
+        doc["pkt_per_sec"] = Sniffer::get().pktPerSec;
         doc["mgmt"]        = Sniffer::get().mgmtCount;
         doc["data"]        = Sniffer::get().dataCount;
         doc["eapol"]       = Sniffer::get().eapolCount;
@@ -150,6 +151,8 @@ private:
                 o["rssi"]    = ap.rssi;
                 o["channel"] = ap.channel;
                 o["auth"]    = (int)ap.auth;
+                o["hidden"]  = ap.hidden;
+                o["clients"] = ap.clients;
             }
             String out; serializeJson(doc, out);
             req->send(200, "application/json", out);
@@ -163,9 +166,38 @@ private:
                 JsonObject o = arr.add<JsonObject>();
                 o["mac"]  = c.macStr; o["ap"] = c.apBssid;
                 o["rssi"] = c.rssi;   o["seen"] = c.lastSeen;
+                JsonArray probes = o["probes"].to<JsonArray>();
+                for (auto& s : c.probedSSIDs) probes.add(s);
             }
             String out; serializeJson(doc, out);
             req->send(200, "application/json", out);
+        });
+
+        // ── System Info ───────────────────────────────────────────────────────
+        server.on("/api/system/info", HTTP_GET, [](AsyncWebServerRequest* req) {
+            JsonDocument doc;
+            doc["chip"]      = ESP.getChipModel();
+            doc["cores"]     = ESP.getChipCores();
+            doc["freq"]      = ESP.getCpuFreqMHz();
+            doc["flash"]     = ESP.getFlashChipSize();
+            doc["heap"]      = ESP.getFreeHeap();
+            doc["heap_min"]  = ESP.getMinFreeHeap();
+            doc["sketch"]    = ESP.getSketchSize();
+            doc["free_sketch"] = ESP.getFreeSketchSpace();
+            doc["mac_ap"]    = WiFi.softAPmacAddress();
+            doc["mac_sta"]   = WiFi.macAddress();
+            doc["ssid"]      = AP_SSID;
+            doc["uptime"]    = millis();
+            doc["sdk"]       = ESP.getSdkVersion();
+            String out; serializeJson(doc, out);
+            req->send(200, "application/json", out);
+        });
+
+        // ── System Reboot ─────────────────────────────────────────────────────
+        server.on("/api/system/reboot", HTTP_POST, [](AsyncWebServerRequest* req) {
+            req->send(200, "application/json", "{\"ok\":true}");
+            delay(200);
+            ESP.restart();
         });
 
         // ── Deauth ────────────────────────────────────────────────────────────
@@ -187,6 +219,15 @@ private:
 
         server.on("/api/deauth/stop", HTTP_POST, [](AsyncWebServerRequest* req) {
             Deauther::get().stop();
+            req->send(200, "application/json", "{\"ok\":true}");
+        });
+
+        _postJson("/api/deauth/intensity", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            uint8_t lvl = doc["level"] | 1;
+            if (lvl > 2) lvl = 2;
+            Deauther::get().intensity = lvl;
+            const char* names[] = {"suave","normal","agressivo"};
+            LOG.info("[DEAUTH] Intensidade: " + String(names[lvl]));
             req->send(200, "application/json", "{\"ok\":true}");
         });
 
@@ -628,16 +669,27 @@ private:
 
         // ── Export ────────────────────────────────────────────────────────────
         server.on("/api/export/pmkids", HTTP_GET, [](AsyncWebServerRequest* req) {
-            String out = "";
+            String out = "# hashcat -m 22000 pmkids.txt wordlist.txt\n";
             for (auto& p : Sniffer::get().pmkids) {
                 char hex[33];
                 for (int i=0;i<16;i++) sprintf(hex+i*2,"%02X",p.pmkid[i]);
-                // formato hashcat 22000: PMKID*AP_MAC*CLIENT_MAC*SSID_HEX
+                // hashcat 22000: PMKID*AP_MAC*CLIENT_MAC*ESSID_HEX
                 String apMac = p.bssid; apMac.replace(":","");
                 String clMac = p.client; clMac.replace(":","");
-                out += String(hex) + "*" + apMac + "*" + clMac + "\n";
+                // Busca SSID pelo BSSID no scanner
+                String ssidHex = "";
+                for (auto& ap : WiFiScanner::get().aps()) {
+                    if (ap.bssidStr == p.bssid) {
+                        for (int i = 0; i < (int)ap.ssid.length(); i++) {
+                            char hb[3]; sprintf(hb, "%02X", (uint8_t)ap.ssid[i]);
+                            ssidHex += hb;
+                        }
+                        break;
+                    }
+                }
+                out += String(hex) + "*" + apMac + "*" + clMac + "*" + ssidHex + "\n";
             }
-            req->send(200, "text/plain", out.isEmpty() ? "# Nenhum PMKID capturado\n" : out);
+            req->send(200, "text/plain", Sniffer::get().pmkids.empty() ? "# Nenhum PMKID\n" : out);
         });
         server.on("/api/export/handshakes", HTTP_GET, [](AsyncWebServerRequest* req) {
             String out = "# Ghost Predator Mobile — Handshakes WPA2\n";

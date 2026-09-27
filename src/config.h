@@ -17,10 +17,17 @@
 
 // ── Limites ───────────────────────────────────────────────────────────────────
 #define MAX_LOG_LINES     300
-#define MAX_NETS          64
-#define MAX_CLIENTS       128
-#define DEAUTH_BURST      64      // frames por ciclo (modo agressivo)
+#define MAX_NETS          80
+#define MAX_CLIENTS       200
+#define MAX_PROBES        400
+#define MAX_HANDSHAKES    150
+#define MAX_PMKIDS        80
+#define DEAUTH_BURST      64      // frames por ciclo (modo normal)
+#define DEAUTH_BURST_SOFT 16      // frames por ciclo (modo suave)
+#define DEAUTH_BURST_HARD 128     // frames por ciclo (modo agressivo)
 #define BEACON_INTERVAL   50      // ms entre beacons flood
+#define SNIFFER_HOP_MS    200     // ms por canal no channel hopping
+#define FISHER_TIMEOUT_MS 30000   // timeout por alvo no PMKID Fisher
 
 // ── Pinos status LED ──────────────────────────────────────────────────────────
 #define LED_STATUS     2          // LED azul onboard

@@ -337,6 +337,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
   <div class="sb-item" data-page="radio2" onclick="nav(this,'radio2')"><i class="fa-solid fa-microchip"></i> Radio 2</div>
   <div class="sb-section">Sistema</div>
   <div class="sb-item" data-page="logs" onclick="nav(this,'logs')"><i class="fa-solid fa-terminal"></i> Logs</div>
+  <div class="sb-item" data-page="sysinfo" onclick="nav(this,'sysinfo');loadSysInfo()"><i class="fa-solid fa-microchip"></i> Info Sistema</div>
 
   <div id="sb-stats">
     <div class="sb-stat">APs <b id="ss-aps">0</b></div>
@@ -380,8 +381,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       <div class="mini-stat"><i class="fa-solid fa-signal" style="color:var(--cyan)"></i> Forte (&gt;-60dBm): <b id="ms-strong">0</b></div>
     </div>
     <div class="tbl-wrap">
-    <table class="tbl"><thead><tr>
-      <th>SSID</th><th>BSSID</th><th>CH</th><th>RSSI</th><th>Dist.</th><th>Vendor</th><th>Auth</th><th>Acao</th>
+    <table class="tbl" id="tbl-aps"><thead><tr>
+      <th onclick="sortAPs('ssid')" style="cursor:pointer" title="Ordenar por SSID">SSID ↕</th>
+      <th>BSSID</th>
+      <th onclick="sortAPs('channel')" style="cursor:pointer" title="Ordenar por canal">CH ↕</th>
+      <th onclick="sortAPs('rssi')" style="cursor:pointer" title="Ordenar por RSSI">RSSI ↕</th>
+      <th>Dist.</th><th>Vendor</th>
+      <th onclick="sortAPs('auth')" style="cursor:pointer" title="Ordenar por segurança">Auth ↕</th>
+      <th>Ação</th>
     </tr></thead><tbody id="t-aps"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">Clique em Escanear</td></tr></tbody></table>
     </div>
   </div>
@@ -391,7 +398,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       <div class="card-title">Clientes Detectados</div>
     </div>
     <div class="tbl-wrap">
-    <table class="tbl"><thead><tr><th>MAC</th><th>AP BSSID</th><th>RSSI</th></tr></thead>
+    <table class="tbl"><thead><tr><th>MAC</th><th>Vendor</th><th>AP BSSID</th><th>RSSI / Dist.</th><th>SSIDs Buscados (Probes)</th></tr></thead>
     <tbody id="t-clients"></tbody></table>
     </div>
   </div>
@@ -413,6 +420,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="stat-box"><div class="stat-num yel" id="sn-eapol">0</div><div class="stat-lbl">EAPOL</div></div>
     <div class="stat-box"><div class="stat-num cyan" id="sn-mgmt">0</div><div class="stat-lbl">Mgmt</div></div>
     <div class="stat-box"><div class="stat-num" id="sn-data">0</div><div class="stat-lbl">Data</div></div>
+    <div class="stat-box"><div class="stat-num grn" id="sn-pps">0</div><div class="stat-lbl">pkt/s</div></div>
+    <div class="stat-box"><div class="stat-num accent" id="sn-ch-cur">—</div><div class="stat-lbl">Canal Atual</div></div>
   </div>
   <div class="card">
     <div class="card-header">
@@ -505,12 +514,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     </div>
     <div class="fg"><label>Cliente MAC (vazio = broadcast todos)</label><input id="d-client" placeholder="FF:FF:FF:FF:FF:FF (broadcast)" class="mono"></div>
     <div class="check-row"><input type="checkbox" id="d-autocap"><span>Auto-Capture &mdash; ativar sniffer no canal para capturar handshake WPA2</span></div>
+    <div style="margin:10px 0">
+      <label style="font-size:.75rem;color:var(--muted);margin-bottom:4px;display:block">Intensidade de Ataque</label>
+      <div style="display:flex;gap:8px">
+        <button id="d-int-0" class="btn btn-ghost" style="font-size:.7rem;padding:4px 12px" onclick="setDeauthIntensity(0)">🟢 Suave</button>
+        <button id="d-int-1" class="btn btn-ghost btn-active" style="font-size:.7rem;padding:4px 12px" onclick="setDeauthIntensity(1)">🟡 Normal</button>
+        <button id="d-int-2" class="btn btn-ghost" style="font-size:.7rem;padding:4px 12px" onclick="setDeauthIntensity(2)">🔴 Agressivo</button>
+      </div>
+      <div style="font-size:.65rem;color:var(--muted);margin-top:4px" id="d-int-desc">Normal: 64 frames/ciclo — balanceia efetividade e estabilidade</div>
+    </div>
     <div class="btns">
       <button class="btn btn-danger" onclick="deauthStart()"><i class="fa-solid fa-bolt"></i> Iniciar Deauth</button>
       <button class="btn btn-ghost" onclick="apiPost('/api/deauth/stop')"><i class="fa-solid fa-stop"></i> Parar</button>
       <button class="btn btn-ghost" onclick="fillFromSel()"><i class="fa-solid fa-crosshairs"></i> Usar AP Selecionado</button>
     </div>
-    <div class="info-box warn" style="margin-top:12px">64 frames/ciclo com 6 reason codes diferentes em ambas direcoes (AP&rarr;Client e Client&rarr;AP).</div>
+    <div class="info-box warn" style="margin-top:12px">8 reason codes diferentes em ambas direções (AP→Client e Client→AP) com sequence counter incremental para parecer tráfego legítimo.</div>
   </div>
   <!-- Target Manager -->
   <div class="card">
@@ -847,12 +865,16 @@ Oi_Fibra</textarea>
       <div class="card-icon" style="background:var(--muted)"><i class="fa-solid fa-terminal"></i></div>
       <div class="card-title">Log Completo</div>
     </div>
-    <div class="btns">
+    <div class="btns" style="flex-wrap:wrap;gap:6px">
       <button class="btn btn-ghost" onclick="loadLogs()"><i class="fa-solid fa-rotate"></i> Carregar</button>
       <button class="btn btn-ghost" onclick="apiPost('/api/logs/clear')"><i class="fa-solid fa-trash"></i> Limpar</button>
+      <button class="btn btn-ghost" onclick="copyAllLogs()"><i class="fa-solid fa-copy"></i> Copiar Tudo</button>
       <button class="btn btn-danger" onclick="doReboot()"><i class="fa-solid fa-power-off"></i> Reiniciar ESP32</button>
     </div>
-    <div id="log-full" style="margin-top:12px;max-height:440px;overflow-y:auto;font-size:.68rem;line-height:1.8;font-family:var(--font-mono)"></div>
+    <div style="margin-top:10px">
+      <input id="log-filter" placeholder="Filtrar logs..." oninput="filterLogs(this.value)" style="width:100%;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.75rem">
+    </div>
+    <div id="log-full" style="margin-top:8px;max-height:440px;overflow-y:auto;font-size:.68rem;line-height:1.8;font-family:var(--font-mono)"></div>
   </div>
 </div>
 
@@ -921,6 +943,41 @@ Oi_Fibra</textarea>
       <div class="card-title">SSIDs Revelados</div>
     </div>
     <div id="hidden-list" style="color:var(--muted);font-size:.78rem;padding:8px 0">Carregue os APs ocultos e inicie o scan para revelar SSIDs.</div>
+  </div>
+</div>
+
+<!-- ── SYSTEM INFO ──────────────────────────────────────────────────────────── -->
+<div class="page" id="page-sysinfo">
+  <div class="stats-grid" id="sysinfo-stats" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">
+    <div class="stat-box"><div class="stat-num accent" id="si-freq">—</div><div class="stat-lbl">CPU MHz</div></div>
+    <div class="stat-box"><div class="stat-num grn" id="si-heap">—</div><div class="stat-lbl">Heap Livre</div></div>
+    <div class="stat-box"><div class="stat-num yel" id="si-heap-min">—</div><div class="stat-lbl">Heap Mín</div></div>
+    <div class="stat-box"><div class="stat-num accent" id="si-flash">—</div><div class="stat-lbl">Flash</div></div>
+    <div class="stat-box"><div class="stat-num grn" id="si-sketch">—</div><div class="stat-lbl">Sketch</div></div>
+    <div class="stat-box"><div class="stat-num" id="si-uptime">—</div><div class="stat-lbl">Uptime</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:var(--accent)"><i class="fa-solid fa-microchip"></i></div>
+      <div class="card-title">Informações do Dispositivo</div>
+      <button class="btn btn-ghost" style="margin-left:auto;font-size:.7rem;padding:4px 10px" onclick="loadSysInfo()"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+      <tbody id="sysinfo-table">
+        <tr><td colspan="2" style="color:var(--muted);text-align:center;padding:18px">Carregando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon red"><i class="fa-solid fa-power-off"></i></div>
+      <div class="card-title">Controles</div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-danger" onclick="if(confirm('Reiniciar o ESP32?')) apiPost('/api/system/reboot').then(()=>toast('red','fa-power-off','Reiniciando...'))">
+        <i class="fa-solid fa-rotate-right"></i> Reiniciar ESP32
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1117,6 +1174,8 @@ function applyStatus(s) {
   setText('sn-eapol', s.eapol||0);
   setText('sn-mgmt', s.mgmt||0);
   setText('sn-data', s.data||0);
+  setText('sn-pps', s.pkt_per_sec||0);
+  setText('sn-ch-cur', s.channel ? 'CH'+s.channel : '—');
 
   setText('ss-aps', s.aps||0);
   setText('ss-cli', s.clients||0);
@@ -1201,6 +1260,17 @@ function toast(type, icon, msg) {
 let _apList = [];
 let _autoScanTimer = null;
 let _scanFilter = '';
+let _sortField = 'rssi', _sortAsc = false;
+function sortAPs(field) {
+  if (_sortField === field) _sortAsc = !_sortAsc;
+  else { _sortField = field; _sortAsc = field === 'ssid'; }
+  const sorted = [..._apList].sort((a,b) => {
+    let va = a[field] ?? '', vb = b[field] ?? '';
+    if (typeof va === 'string') va = va.toLowerCase(), vb = vb.toLowerCase();
+    return _sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+  });
+  renderAPTable(sorted);
+}
 
 function toggleAutoScan() {
   const btn = document.getElementById('btn-autoscan');
@@ -1235,20 +1305,25 @@ function renderAPTable(data) {
   const wpa2Count = filtered.filter(ap => ap.auth >= 3).length;
   setText('scan-wpa2', wpa2Count);
   filtered.forEach(ap => {
-    const pct = Math.max(0, Math.min(100, (ap.rssi + 100) * 2));
+    const pct = rssiToQuality(ap.rssi);
     const authNames = ['Open','WEP','WPA','WPA2','WPA/WPA2','WPA3'];
     const auth = authNames[ap.auth] || '?';
     const authBadge = ap.auth===0 ? 'badge-grn' : ap.auth>=3 ? 'badge-red' : 'badge-yel';
     const dist = rssiToDistance(ap.rssi);
-    const vendor = ouiLookup(ap.bssid);
+    const qual = pct;
+    const vendor = ouiLookup(ap.bssid) || '<span style="color:var(--muted)">—</span>';
     const rssiColor = ap.rssi > -60 ? 'var(--green)' : ap.rssi > -75 ? 'var(--yel)' : 'var(--red)';
+    const hiddenBadge = ap.hidden ? '<span class="badge badge-yel" style="font-size:.55rem;margin-left:3px">HIDDEN</span>' : '';
+    const wpsBadge = ap.wps ? '<span class="badge badge-red" style="font-size:.55rem;margin-left:3px">WPS</span>' : '';
+    const clientsBadge = ap.clients > 0 ? `<span style="font-size:.65rem;color:var(--cyan);margin-left:4px">${ap.clients}👤</span>` : '';
     const tr = document.createElement('tr');
+    tr.dataset.bssid = ap.bssid;
     tr.innerHTML = `
-      <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b></td>
-      <td class="mono" style="font-size:.7rem">${ap.bssid}</td>
+      <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b>${hiddenBadge}${wpsBadge}${clientsBadge}</td>
+      <td class="mono" style="font-size:.7rem">${ap.bssid} <button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem" title="Copiar BSSID" onclick="navigator.clipboard.writeText('${ap.bssid}');showToast('BSSID copiado')"><i class="fa-solid fa-copy"></i></button></td>
       <td style="text-align:center">${ap.channel}</td>
-      <td><div class="rssi-pill"><div class="rssi-bar" style="width:${pct/3}px;background:${rssiColor}"></div><span style="color:${rssiColor}">${ap.rssi}dBm</span></div></td>
-      <td style="font-size:.7rem;color:var(--cyan)">${dist}</td>
+      <td><div class="rssi-pill"><div class="rssi-bar" style="width:${qual/3}px;background:${rssiColor}"></div><span style="color:${rssiColor}">${ap.rssi}dBm</span></div></td>
+      <td style="font-size:.7rem;color:var(--cyan)">${dist} <span style="font-size:.6rem;color:var(--muted)">(${qual}%)</span></td>
       <td style="font-size:.65rem;color:var(--muted)">${vendor}</td>
       <td><span class="badge ${authBadge}">${auth}</span></td>
       <td style="white-space:nowrap">
@@ -1281,8 +1356,19 @@ async function wifiScan() {
   const ct = document.getElementById('t-clients');
   ct.innerHTML = '';
   clients.forEach(c => {
+    const vendor = ouiLookup(c.mac);
+    const probesHtml = (c.probes||[]).length > 0
+      ? (c.probes||[]).map(p=>`<span style="background:var(--surface2);border-radius:3px;padding:1px 4px;margin:1px;font-size:.6rem;display:inline-block">${esc(p)}</span>`).join('')
+      : '<span style="color:var(--muted);font-size:.6rem">—</span>';
+    const dist = rssiToDistance(c.rssi);
+    const rssiColor = c.rssi > -60 ? 'var(--green)' : c.rssi > -75 ? 'var(--yel)' : 'var(--red)';
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="mono">${c.mac}</td><td class="mono">${c.ap}</td><td>${c.rssi}dBm</td>`;
+    tr.innerHTML = `
+      <td class="mono" style="font-size:.7rem">${c.mac}</td>
+      <td style="font-size:.65rem;color:var(--cyan)">${vendor||'—'}</td>
+      <td class="mono" style="font-size:.65rem;color:var(--muted)">${c.ap}</td>
+      <td><span style="color:${rssiColor}">${c.rssi}dBm</span> <span style="color:var(--muted);font-size:.65rem">${dist}</span></td>
+      <td style="max-width:220px;white-space:normal">${probesHtml}</td>`;
     ct.appendChild(tr);
   });
 }
@@ -1361,6 +1447,22 @@ function delTarget(i) {
 renderTargets();
 
 // ── DEAUTH ────────────────────────────────────────────────────────────────────
+let _deauthIntensity = 1;
+const _intensityDesc = [
+  'Suave: 16 frames/ciclo — mínima visibilidade, menor efetividade',
+  'Normal: 64 frames/ciclo — balanceia efetividade e estabilidade',
+  'Agressivo: 128 frames/ciclo — máxima efetividade, pode causar instabilidade no AP'
+];
+function setDeauthIntensity(v) {
+  _deauthIntensity = v;
+  [0,1,2].forEach(i => {
+    const el = document.getElementById('d-int-'+i);
+    if (el) el.style.background = i===v ? 'var(--red)' : '';
+  });
+  const desc = document.getElementById('d-int-desc');
+  if (desc) desc.textContent = _intensityDesc[v];
+  apiPost('/api/deauth/intensity', { level: v });
+}
 function deauthStart() {
   const bssid = document.getElementById('d-bssid').value.trim();
   if (!bssid) { toast('yel','fa-triangle-exclamation','Informe o BSSID'); return; }
@@ -1369,6 +1471,31 @@ function deauthStart() {
   const autoC = document.getElementById('d-autocap').checked;
   apiPost('/api/deauth/start', { bssid, client, channel: ch, autoCapture: autoC });
   toast('red','fa-bolt','Deauth iniciado: ' + bssid);
+}
+
+// ── SYSTEM INFO ───────────────────────────────────────────────────────────────
+async function loadSysInfo() {
+  const d = await apiGet('/api/system/info');
+  if (!d) return;
+  setText('si-freq', d.freq);
+  setText('si-heap', fmtB(d.heap));
+  setText('si-heap-min', fmtB(d.heap_min));
+  setText('si-flash', fmtB(d.flash));
+  setText('si-sketch', fmtB(d.sketch));
+  setText('si-uptime', fmtUp(d.uptime));
+  const rows = [
+    ['Chip', d.chip], ['Cores', d.cores], ['CPU', d.freq + ' MHz'],
+    ['Flash', fmtB(d.flash)], ['Sketch', fmtB(d.sketch)],
+    ['Free Sketch', fmtB(d.free_sketch)], ['Heap Livre', fmtB(d.heap)],
+    ['Heap Mínimo', fmtB(d.heap_min)], ['Uptime', fmtUp(d.uptime)],
+    ['MAC AP', d.mac_ap], ['MAC STA', d.mac_sta],
+    ['SSID AP', d.ssid], ['SDK', d.sdk]
+  ];
+  const tb = document.getElementById('sysinfo-table');
+  if (!tb) return;
+  tb.innerHTML = rows.map(([k,v]) =>
+    `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 4px;color:var(--muted);width:40%">${k}</td><td class="mono" style="padding:6px 4px">${v||'—'}</td></tr>`
+  ).join('');
 }
 
 // ── SNIFFER ───────────────────────────────────────────────────────────────────
@@ -1704,14 +1831,24 @@ async function r2scan() {
 }
 
 // ── LOGS ──────────────────────────────────────────────────────────────────────
+let _logCache = [];
 async function loadLogs() {
-  const data = await apiGet('/api/logs');
+  _logCache = await apiGet('/api/logs');
+  renderLogs(_logCache, document.getElementById('log-filter')?.value || '');
+}
+function renderLogs(data, filter) {
   const el = document.getElementById('log-full');
   const colors = ['var(--text)','var(--yellow)','var(--red)','var(--green)','var(--cyan)'];
-  el.innerHTML = data.map(e =>
+  const filtered = filter ? data.filter(e => e.msg.toLowerCase().includes(filter.toLowerCase())) : data;
+  el.innerHTML = filtered.map(e =>
     `<div style="color:${colors[e.lvl]}"><span style="color:#3d3d4d">${fmtTs(e.ts)} </span>${esc(e.msg)}</div>`
   ).join('');
   el.scrollTop = el.scrollHeight;
+}
+function filterLogs(val) { renderLogs(_logCache, val); }
+function copyAllLogs() {
+  const txt = _logCache.map(e => `[${fmtTs(e.ts)}] ${e.msg}`).join('\n');
+  navigator.clipboard.writeText(txt).then(() => showToast('Logs copiados!'));
 }
 
 // ── NUCLEAR ───────────────────────────────────────────────────────────────────
@@ -1802,35 +1939,101 @@ async function doReboot() {
 }
 
 // ── SIGNAL DISTANCE ───────────────────────────────────────────────────────────
-function rssiToDistance(rssi) {
-  const txPower = -30, n = 2.7;
+// Modelo Log-Distance com path loss exponent variável por ambiente
+// n=2.0 (espaço livre) | n=2.7 (indoor típico) | n=3.5 (indoor obstáculos)
+function rssiToDistance(rssi, env = 'indoor') {
+  const txPower = -40; // EIRP típico de AP doméstico em dBm a 1m
+  const n = env === 'outdoor' ? 2.0 : env === 'dense' ? 3.5 : 2.7;
   const d = Math.pow(10, (txPower - rssi) / (10 * n));
-  if (d < 1) return '<1m';
-  if (d > 100) return '>100m';
-  return d.toFixed(0) + 'm';
+  if (d < 1)   return '<1m';
+  if (d < 5)   return d.toFixed(1) + 'm';
+  if (d < 50)  return d.toFixed(0) + 'm';
+  if (d < 200) return '~' + Math.round(d/10)*10 + 'm';
+  return '>200m';
+}
+function rssiToQuality(rssi) {
+  // Converte RSSI para qualidade 0-100% (escala logarítmica invertida)
+  if (rssi >= -50) return 100;
+  if (rssi <= -100) return 0;
+  return Math.round(2 * (rssi + 100));
 }
 
 // ── OUI VENDOR LOOKUP ─────────────────────────────────────────────────────────
+// Tabela expandida: ~70 vendors. Lookup: tenta prefixo /24 (8 chars) depois /16 (5 chars)
 const _oui = {
-  'F8:8F:CA':'Apple','DC:A4:CA':'Apple','A8:5C:2C':'Apple','3C:22:FB':'Apple','00:26:BB':'Apple','A8:86:DD':'Apple',
-  '00:50:F2':'Microsoft','28:18:78':'Microsoft',
-  '00:1A:11':'Google','F4:F5:DB':'Google',
-  '50:B7:C3':'Samsung','14:49:E0':'Samsung','78:40:E4':'Samsung',
+  // Apple
+  'F8:8F:CA':'Apple','DC:A4:CA':'Apple','A8:5C:2C':'Apple','3C:22:FB':'Apple',
+  '00:26:BB':'Apple','A8:86:DD':'Apple','98:01:A7':'Apple','3C:D0:F8':'Apple',
+  'F0:D1:A9':'Apple','BC:54:51':'Apple','40:33:1A':'Apple','68:5B:35':'Apple',
+  // Microsoft
+  '00:50:F2':'Microsoft','28:18:78':'Microsoft','7C:ED:8D':'Microsoft','50:1A:C5':'Microsoft',
+  // Google / Nest
+  '00:1A:11':'Google','F4:F5:DB':'Google','54:60:09':'Google','30:FD:38':'Google',
+  // Samsung
+  '50:B7:C3':'Samsung','14:49:E0':'Samsung','78:40:E4':'Samsung','CC:07:AB':'Samsung',
+  '78:BD:BC':'Samsung','B0:47:BF':'Samsung','40:0E:85':'Samsung',
+  // Xiaomi
   '8C:BE:BE':'Xiaomi','14:F6:5A':'Xiaomi','78:11:DC':'Xiaomi','28:6C:07':'Xiaomi',
+  'FC:64:BA':'Xiaomi','64:09:80':'Xiaomi','04:CF:8C':'Xiaomi',
+  // TP-Link
   'FC:EC:DA':'TP-Link','00:1D:0F':'TP-Link','30:B5:C2':'TP-Link','AC:84:C9':'TP-Link',
+  'C4:E9:84':'TP-Link','98:DA:C4':'TP-Link','50:C7:BF':'TP-Link',
+  // ASUS
   '00:90:4C':'ASUS','14:DD:A9':'ASUS','2C:FD:A1':'ASUS','A8:5E:45':'ASUS',
-  '20:4E:7F':'D-Link','B0:C5:54':'D-Link','1C:7E:E5':'D-Link',
-  '00:18:E7':'Netgear','C0:3F:0E':'Netgear','A0:40:A0':'Netgear',
-  '18:64:72':'Huawei','00:E0:FC':'Huawei','54:89:98':'Huawei',
-  '00:1E:58':'Cisco','00:0C:85':'Cisco','58:97:BD':'Cisco',
+  '10:BF:48':'ASUS','E0:3F:49':'ASUS','70:4D:7B':'ASUS',
+  // D-Link
+  '20:4E:7F':'D-Link','B0:C5:54':'D-Link','1C:7E:E5':'D-Link','78:54:2E':'D-Link',
+  // Netgear
+  '00:18:E7':'Netgear','C0:3F:0E':'Netgear','A0:40:A0':'Netgear','20:E5:2A':'Netgear',
+  '2C:B0:5D':'Netgear',
+  // Huawei
+  '18:64:72':'Huawei','00:E0:FC':'Huawei','54:89:98':'Huawei','AC:E2:15':'Huawei',
+  '28:31:52':'Huawei','48:DB:50':'Huawei',
+  // Cisco
+  '00:1E:58':'Cisco','00:0C:85':'Cisco','58:97:BD':'Cisco','00:23:04':'Cisco',
+  '40:55:39':'Cisco',
+  // Intel
   '40:4D:7F':'Intel','00:1B:21':'Intel','08:D4:0C':'Intel','C4:12:F5':'Intel',
-  '00:1F:3A':'Motorola','A0:D0:DC':'Motorola',
-  'EC:1F:72':'Aruba','AC:A3:1E':'Aruba'
+  '9C:B6:D0':'Intel','A4:C3:F0':'Intel',
+  // Motorola
+  '00:1F:3A':'Motorola','A0:D0:DC':'Motorola','1C:44:14':'Motorola',
+  // Aruba/HP
+  'EC:1F:72':'Aruba','AC:A3:1E':'Aruba','00:1A:1E':'Aruba',
+  // Ubiquiti
+  '00:15:6D':'Ubiquiti','04:18:D6':'Ubiquiti','78:8A:20':'Ubiquiti','24:A4:3C':'Ubiquiti',
+  'DC:9F:DB':'Ubiquiti',
+  // ZTE
+  '00:26:ED':'ZTE','7C:B7:33':'ZTE','E8:D8:D1':'ZTE','E4:C6:FB':'ZTE',
+  // Realtek
+  '00:E0:4C':'Realtek','52:54:00':'Realtek','44:8A:5B':'Realtek',
+  // Qualcomm/Atheros
+  '00:24:BE':'Qualcomm','00:26:5A':'Qualcomm','20:02:AF':'Qualcomm',
+  // Broadcom
+  '00:10:18':'Broadcom','00:90:4C':'Broadcom',
+  // LG
+  'A8:1B:5A':'LG','C4:36:6C':'LG','28:C6:3F':'LG',
+  // Sony
+  '30:17:C8':'Sony','00:04:1F':'Sony','84:38:38':'Sony',
+  // OnePlus
+  '8C:47:BE':'OnePlus','94:65:2D':'OnePlus',
+  // Oppo / Realme
+  '00:1E:10':'Oppo','2C:6F:C9':'Oppo','B4:F1:C9':'Realme',
+  // Mikrotik
+  '4C:5E:0C':'Mikrotik','00:0C:42':'Mikrotik','DC:2C:6E':'Mikrotik',
+  // Fortinet
+  'E8:1C:BA':'Fortinet','00:09:0F':'Fortinet',
+  // Ruckus
+  '00:13:92':'Ruckus','6C:AA:B3':'Ruckus',
+  // Amazon / Echo
+  'FC:65:DE':'Amazon','44:65:0D':'Amazon','68:37:E9':'Amazon','74:C2:46':'Amazon',
+  // Espressif (ESP32/ESP8266)
+  '24:6F:28':'Espressif','A4:CF:12':'Espressif','CC:50:E3':'Espressif',
+  '30:AE:A4':'Espressif','80:7D:3A':'Espressif','10:52:1C':'Espressif'
 };
 function ouiLookup(mac) {
   if (!mac) return '';
-  const prefix = mac.substring(0,8).toUpperCase();
-  return _oui[prefix] || '';
+  const m = mac.toUpperCase();
+  return _oui[m.substring(0,8)] || _oui[m.substring(0,5)] || '';
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
@@ -1845,8 +2048,11 @@ function fmtTs(ms) {
          d.getSeconds().toString().padStart(2,'0');
 }
 function fmtUp(ms) {
-  const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60);
-  return pad(h)+':'+pad(m%60)+':'+pad(s%60);
+  const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60),d=Math.floor(h/24);
+  if (d>0) return d+'d '+pad(h%24)+'h '+pad(m%60)+'m';
+  if (h>0) return h+'h '+pad(m%60)+'m '+pad(s%60)+'s';
+  if (m>0) return m+'m '+pad(s%60)+'s';
+  return s+'s';
 }
 function pad(n){ return String(n).padStart(2,'0'); }
 function fmtB(b){ return b>1024?(b/1024).toFixed(0)+'KB':b+'B'; }

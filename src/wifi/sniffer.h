@@ -90,13 +90,28 @@ public:
         LOG.info("[SNIFFER] Hop retomado");
     }
 
+    bool  eapolActive = false;   // pausa o hop enquanto EAPOL está em andamento
+    uint32_t pktPerSec = 0;      // pacotes por segundo (atualizado a cada tick)
+
     void tick() {
-        if (!running || !channelHop) return;
-        static unsigned long last = 0;
-        if (millis() - last > 200) {
+        if (!running) return;
+        static unsigned long lastHop = 0;
+        static unsigned long lastPps = 0;
+        static uint32_t lastPktCount = 0;
+        // Atualiza pps a cada 1s
+        if (millis() - lastPps > 1000) {
+            pktPerSec  = packetCount - lastPktCount;
+            lastPktCount = packetCount;
+            lastPps = millis();
+        }
+        if (!channelHop) return;
+        // Pausa hop se EAPOL ativo (capturando handshake)
+        uint32_t hopMs = eapolActive ? SNIFFER_HOP_MS * 4 : SNIFFER_HOP_MS;
+        if (millis() - lastHop > hopMs) {
             hopChannel = (hopChannel % 13) + 1;
             esp_wifi_set_channel(hopChannel, WIFI_SECOND_CHAN_NONE);
-            last = millis();
+            eapolActive = false;
+            lastHop = millis();
         }
     }
 
@@ -150,9 +165,14 @@ private:
                 pr.ssid = ssid; pr.rssi = rssi;
                 pr.channel = ch; pr.ts = millis();
                 memcpy(pr.macRaw, hdr->a2, 6);
-                if (self.probes.size() < 300) self.probes.push_back(pr);
+                // Deduplicação por MAC+SSID
+                bool dupProbe = false;
+                for (auto& ep : self.probes)
+                    if (ep.mac == pr.mac && ep.ssid == pr.ssid) { dupProbe = true; break; }
+                if (!dupProbe && self.probes.size() < MAX_PROBES) self.probes.push_back(pr);
                 WiFiScanner::get().addClient(hdr->a2, hdr->a3, rssi);
                 if (ssid.length() > 0) {
+                    WiFiScanner::get().addClientProbe(pr.mac, ssid);
                     LOG.data("[PROBE] " + pr.mac + " -> \"" + ssid + "\"");
                     if (self.onProbe) self.onProbe(hdr->a2, ssid.c_str(), ch);
                 }
@@ -192,7 +212,8 @@ private:
                     else if (ack&&mic&&ins) hs.type=3;
                     else hs.type=4;
                 }
-                if (self.handshakes.size() < 100) self.handshakes.push_back(hs);
+                self.eapolActive = true; // pausa channel hop durante handshake
+                if (self.handshakes.size() < MAX_HANDSHAKES) self.handshakes.push_back(hs);
 
                 // Atualiza estado consolidado do handshake
                 HandshakeState* st = nullptr;

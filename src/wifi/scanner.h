@@ -11,7 +11,9 @@ struct APInfo {
     int32_t rssi;
     uint8_t channel;
     wifi_auth_mode_t auth;
-    int clients;
+    int clients = 0;
+    bool hidden = false;
+    bool wps    = false;
 };
 
 struct ClientInfo {
@@ -20,6 +22,7 @@ struct ClientInfo {
     String apBssid;
     int32_t rssi;
     unsigned long lastSeen;
+    std::vector<String> probedSSIDs;
 };
 
 class WiFiScanner {
@@ -30,20 +33,23 @@ public:
         LOG.info("Iniciando scan de redes WiFi...");
         _aps.clear();
         int n = WiFi.scanNetworks(false, true);
+        int hiddenCnt = 0;
         for (int i = 0; i < n && i < MAX_NETS; i++) {
             APInfo ap;
             ap.ssid    = WiFi.SSID(i);
             ap.rssi    = WiFi.RSSI(i);
             ap.channel = WiFi.channel(i);
             ap.auth    = WiFi.encryptionType(i);
+            ap.hidden  = (ap.ssid.length() == 0);
             ap.clients = 0;
+            if (ap.hidden) hiddenCnt++;
             uint8_t* bssidPtr = WiFi.BSSID(i);
             if (bssidPtr) memcpy(ap.bssid, bssidPtr, 6);
             ap.bssidStr = bssidToStr(ap.bssid);
             _aps.push_back(ap);
         }
         WiFi.scanDelete();
-        LOG.success("Scan concluído: " + String(_aps.size()) + " redes encontradas");
+        LOG.success("Scan: " + String(_aps.size()) + " redes (" + String(hiddenCnt) + " ocultas)");
     }
 
     const std::vector<APInfo>&    aps()     const { return _aps; }
@@ -63,6 +69,16 @@ public:
         c.rssi     = rssi;
         c.lastSeen = millis();
         _clients.push_back(c);
+    }
+
+    void addClientProbe(const String& mac, const String& ssid) {
+        for (auto& c : _clients) {
+            if (c.macStr == mac) {
+                for (auto& s : c.probedSSIDs) if (s == ssid) return;
+                if (c.probedSSIDs.size() < 20) c.probedSSIDs.push_back(ssid);
+                return;
+            }
+        }
     }
 
     static String bssidToStr(const uint8_t* b) {
