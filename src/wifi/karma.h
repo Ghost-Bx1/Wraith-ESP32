@@ -5,6 +5,16 @@
 #include <unordered_set>
 #include "../utils/logger.h"
 
+struct _ArduinoStringHash {
+    size_t operator()(const String& s) const {
+        size_t h = 5381;
+        for (size_t i = 0; i < s.length(); i++)
+            h = ((h << 5) + h) + (uint8_t)s[i];
+        return h;
+    }
+    bool operator()(const String& a, const String& b) const { return a == b; }
+};
+
 /*
  * Karma + MANA Attack
  *
@@ -21,7 +31,7 @@ public:
     bool manaMode  = false;   // true = MANA (responde com todos SSIDs conhecidos)
     std::vector<String> respondedTo;
     std::vector<String> knownSSIDs;       // todos SSIDs vistos em probes (ordenado para iteração)
-    std::unordered_set<String> _knownSet; // lookup O(1)
+    std::unordered_set<String, _ArduinoStringHash, _ArduinoStringHash> _knownSet; // lookup O(1)
 
     void start(bool mana = false) {
         running  = true;

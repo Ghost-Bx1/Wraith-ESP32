@@ -50,7 +50,7 @@ void attackTask(void*) {
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(3));
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 
@@ -91,6 +91,10 @@ void setup() {
         KarmaAttack::get().onProbe(mac, ssid, ch);
         TargetIntel::get().updateDevice(WiFiScanner::bssidToStr(mac), 0, String(ssid));
     };
+
+    // Deauther: bloqueia sniffer no canal do alvo durante ataque
+    Deauther::get().fnLockChannel = [](uint8_t ch) { Sniffer::get().lockChannel(ch); };
+    Deauther::get().fnResumeHop   = []()            { Sniffer::get().resumeHop(); };
 
     Radio2::get().begin();
     BLEScanner::get().begin();
