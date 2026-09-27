@@ -200,6 +200,20 @@ private:
             ESP.restart();
         });
 
+        // ── Stealth Mode ──────────────────────────────────────────────────────
+        _postJson("/api/system/stealth", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            bool on = doc["on"] | false;
+            if (on) {
+                // Reduz TX power ao mínimo e para sniffer se ativo passivamente
+                esp_wifi_set_max_tx_power(8);  // ~2dBm
+                LOG.warn("[STEALTH] Modo stealth ativo — TX power reduzido");
+            } else {
+                esp_wifi_set_max_tx_power(78); // ~19.5dBm (default)
+                LOG.info("[STEALTH] Modo stealth desativado — TX power restaurado");
+            }
+            req->send(200, "application/json", "{\"ok\":true}");
+        });
+
         // ── Deauth ────────────────────────────────────────────────────────────
         _postJson("/api/deauth/start", [](AsyncWebServerRequest* req, JsonDocument& doc) {
             String bssid  = doc["bssid"]       | "00:00:00:00:00:00";

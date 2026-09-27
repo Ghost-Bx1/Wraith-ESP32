@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -303,6 +303,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="sys-chip" id="chip-heap">RAM --</div>
     <div class="sys-chip" id="chip-ch">CH --</div>
     <div class="sys-chip" id="chip-uptime">00:00:00</div>
+    <button class="icon-btn" id="btn-stealth" onclick="toggleStealth()" title="Stealth Mode - reduz transmissao e atividade visivel"><i class="fa-solid fa-user-ninja"></i></button>
     <button class="icon-btn" onclick="toggleTheme()" title="Alternar tema"><i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i></button>
     <button class="icon-btn" onclick="openChpass()" title="Alterar senha"><i class="fa-solid fa-key"></i></button>
     <button class="icon-btn" onclick="doLogout()" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
@@ -421,7 +422,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="stat-box"><div class="stat-num cyan" id="sn-mgmt">0</div><div class="stat-lbl">Mgmt</div></div>
     <div class="stat-box"><div class="stat-num" id="sn-data">0</div><div class="stat-lbl">Data</div></div>
     <div class="stat-box"><div class="stat-num grn" id="sn-pps">0</div><div class="stat-lbl">pkt/s</div></div>
-    <div class="stat-box"><div class="stat-num accent" id="sn-ch-cur">—</div><div class="stat-lbl">Canal Atual</div></div>
+    <div class="stat-box"><div class="stat-num accent" id="sn-ch-cur">-</div><div class="stat-lbl">Canal Atual</div></div>
   </div>
   <div class="card">
     <div class="card-header">
@@ -487,12 +488,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       <div class="card-icon orange"><i class="fa-solid fa-satellite-dish"></i></div>
       <div class="card-title">Probe Requests</div>
       <button class="btn btn-ghost" style="margin-left:auto" onclick="loadProbes()"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+      <button class="btn btn-ghost" style="margin-left:6px" onclick="exportProbes()"><i class="fa-solid fa-download"></i> Export</button>
     </div>
     <div class="info-box">Dispositivos buscando redes WiFi conhecidas. Combine com <b>Karma Attack</b> para forcar conexoes.</div>
-    <div class="tbl-wrap">
-    <table class="tbl"><thead><tr><th>MAC</th><th>SSID Buscado</th><th>RSSI</th><th>Canal</th></tr></thead>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="btn btn-ghost btn-active" id="probe-btn-flat" style="font-size:.7rem;padding:4px 12px" onclick="setProbeView('flat')"><i class="fa-solid fa-list"></i> Lista</button>
+      <button class="btn btn-ghost" id="probe-btn-grouped" style="font-size:.7rem;padding:4px 12px" onclick="setProbeView('grouped')"><i class="fa-solid fa-layer-group"></i> Por Dispositivo</button>
+    </div>
+    <div class="tbl-wrap" id="probe-flat-view">
+    <table class="tbl"><thead><tr><th>MAC</th><th>Vendor</th><th>SSID Buscado</th><th>RSSI</th><th>Canal</th><th>Hora</th></tr></thead>
     <tbody id="t-probes"></tbody></table>
     </div>
+    <div id="probe-grouped-view" style="display:none"></div>
   </div>
 </div>
 
@@ -521,7 +528,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
         <button id="d-int-1" class="btn btn-ghost btn-active" style="font-size:.7rem;padding:4px 12px" onclick="setDeauthIntensity(1)">🟡 Normal</button>
         <button id="d-int-2" class="btn btn-ghost" style="font-size:.7rem;padding:4px 12px" onclick="setDeauthIntensity(2)">🔴 Agressivo</button>
       </div>
-      <div style="font-size:.65rem;color:var(--muted);margin-top:4px" id="d-int-desc">Normal: 64 frames/ciclo — balanceia efetividade e estabilidade</div>
+      <div style="font-size:.65rem;color:var(--muted);margin-top:4px" id="d-int-desc">Normal: 64 frames/ciclo - balanceia efetividade e estabilidade</div>
     </div>
     <div class="btns">
       <button class="btn btn-danger" onclick="deauthStart()"><i class="fa-solid fa-bolt"></i> Iniciar Deauth</button>
@@ -555,14 +562,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     </div>
     <div class="fg"><label>Template do Portal Captive</label>
       <select id="et-template" onchange="setPortalTemplate(this.value)">
-        <option value="0">0 — WiFi Reconnect (padrao escuro)</option>
-        <option value="1">1 — ISP / Provedor (corporativo azul, pede CPF)</option>
-        <option value="2">2 — Router Admin Terminal (hacker dark, admin/password)</option>
+        <option value="0">0 - WiFi Reconnect (padrao escuro)</option>
+        <option value="1">1 - ISP / Provedor (corporativo azul, pede CPF)</option>
+        <option value="2">2 - Router Admin Terminal (hacker dark, admin/password)</option>
       </select>
     </div>
     <div class="btns">
       <button class="btn btn-danger" onclick="etStart()"><i class="fa-solid fa-play"></i> Iniciar</button>
-      <button class="btn btn-ghost" onclick="apiPost('/api/eviltwin/stop')"><i class="fa-solid fa-stop"></i> Parar</button>
+      <button class="btn btn-ghost" onclick="etStop()"><i class="fa-solid fa-stop"></i> Parar</button>
       <button class="btn btn-ghost" onclick="fillETFromSel()"><i class="fa-solid fa-crosshairs"></i> AP Selecionado</button>
       <button class="btn btn-primary" onclick="loadCreds()"><i class="fa-solid fa-rotate"></i> Atualizar Creds</button>
       <a href="/api/export/creds" class="btn btn-ghost" download="creds.txt"><i class="fa-solid fa-download"></i> Export</a>
@@ -575,7 +582,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       <span class="badge badge-red" id="cred-cnt" style="margin-left:auto">0</span>
     </div>
     <div class="tbl-wrap">
-    <table class="tbl"><thead><tr><th>SSID</th><th>SENHA</th><th>IP</th><th>Tempo</th></tr></thead>
+    <table class="tbl"><thead><tr><th>SSID</th><th>SENHA</th><th>IP</th><th>Tempo</th><th></th></tr></thead>
     <tbody id="t-creds"></tbody></table>
     </div>
   </div>
@@ -612,7 +619,7 @@ Oi_Fibra</textarea>
     </div>
     <div id="bc-status" class="atk-bar" style="display:none;margin-bottom:10px">
       <i class="fa-solid fa-tower-broadcast"></i>
-      <span>Beacon Flood ativo — <b id="bc-ssid-cnt">0</b> SSIDs transmitindo</span>
+      <span>Beacon Flood ativo - <b id="bc-ssid-cnt">0</b> SSIDs transmitindo</span>
     </div>
     <div class="btns">
       <button class="btn btn-warn" onclick="beaconStart()"><i class="fa-solid fa-play"></i> Iniciar Flood</button>
@@ -648,7 +655,7 @@ Oi_Fibra</textarea>
 <!-- ── PMKID FISHER ────────────────────────────────────────────────────── -->
 <div class="page" id="page-fisher">
   <div class="qa-card">
-    <div class="qa-title"><i class="fa-solid fa-fish"></i> PMKID Fisher — Captura sem Clientes</div>
+    <div class="qa-title"><i class="fa-solid fa-fish"></i> PMKID Fisher - Captura sem Clientes</div>
     <div class="qa-desc">Envia Auth+Assoc forjados para cada AP e captura o PMKID do EAPOL M1 de resposta. <b>Nao precisa de clientes conectados.</b> Use hashcat -m 22000 no resultado.</div>
   </div>
   <div class="card">
@@ -704,7 +711,7 @@ Oi_Fibra</textarea>
       <span class="badge badge-yel" id="wps-cnt" style="margin-left:auto">0</span>
     </div>
     <div class="tbl-wrap">
-    <table class="tbl"><thead><tr><th>SSID</th><th>BSSID</th><th>CH</th><th>WPS Ver</th><th>Metodos</th><th>RSSI</th><th>Status</th></tr></thead>
+    <table class="tbl"><thead><tr><th>SSID</th><th>BSSID</th><th>CH</th><th>WPS Ver</th><th>Metodos</th><th>RSSI</th><th>Status</th><th>Ataque</th></tr></thead>
     <tbody id="t-wps"></tbody></table>
     </div>
   </div>
@@ -909,11 +916,27 @@ Oi_Fibra</textarea>
       <div class="card-icon red"><i class="fa-solid fa-list-check"></i></div>
       <div class="card-title">Fases da Cadeia</div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;font-size:.78rem">
-      <div class="check-row"><i class="fa-solid fa-circle-check" style="color:var(--green)"></i><span><b>Fase 1 — Sniffer</b>: Ativa modo promíscuo + channel hopping</span></div>
-      <div class="check-row"><i class="fa-solid fa-circle-check" style="color:var(--green)"></i><span><b>Fase 2 — Deauth Multi</b>: Envia deauth para todos os APs WPA2 (auth ≥ 3)</span></div>
-      <div class="check-row"><i class="fa-solid fa-circle-check" style="color:var(--green)"></i><span><b>Fase 3 — PMKID Fisher</b>: Auth+Assoc forjados para capturar PMKID sem clientes</span></div>
-      <div class="check-row"><i class="fa-solid fa-circle-check" style="color:var(--green)"></i><span><b>Fase 4 — Karma</b>: Responde probe requests forçando conexões no AP falso</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:.78rem">
+      <div id="nuc-phase-1" class="check-row" style="padding:8px;border-radius:6px;transition:background .3s">
+        <i class="fa-solid fa-circle" id="nuc-icon-1" style="color:var(--muted);margin-right:8px"></i>
+        <div><span style="font-weight:600">Fase 1 - Sniffer</span>: Ativa modo promiscuo + channel hopping<br>
+          <span id="nuc-stat-1" style="font-size:.65rem;color:var(--muted)">Aguardando...</span></div>
+      </div>
+      <div id="nuc-phase-2" class="check-row" style="padding:8px;border-radius:6px;transition:background .3s">
+        <i class="fa-solid fa-circle" id="nuc-icon-2" style="color:var(--muted);margin-right:8px"></i>
+        <div><span style="font-weight:600">Fase 2 - Deauth Multi</span>: Envia deauth para todos os APs WPA2<br>
+          <span id="nuc-stat-2" style="font-size:.65rem;color:var(--muted)">Aguardando...</span></div>
+      </div>
+      <div id="nuc-phase-3" class="check-row" style="padding:8px;border-radius:6px;transition:background .3s">
+        <i class="fa-solid fa-circle" id="nuc-icon-3" style="color:var(--muted);margin-right:8px"></i>
+        <div><span style="font-weight:600">Fase 3 - PMKID Fisher</span>: Auth+Assoc forcados para capturar PMKID<br>
+          <span id="nuc-stat-3" style="font-size:.65rem;color:var(--muted)">Aguardando...</span></div>
+      </div>
+      <div id="nuc-phase-4" class="check-row" style="padding:8px;border-radius:6px;transition:background .3s">
+        <i class="fa-solid fa-circle" id="nuc-icon-4" style="color:var(--muted);margin-right:8px"></i>
+        <div><span style="font-weight:600">Fase 4 - Karma</span>: Responde probe requests forcando conexoes<br>
+          <span id="nuc-stat-4" style="font-size:.65rem;color:var(--muted)">Aguardando...</span></div>
+      </div>
     </div>
   </div>
 </div>
@@ -949,12 +972,12 @@ Oi_Fibra</textarea>
 <!-- ── SYSTEM INFO ──────────────────────────────────────────────────────────── -->
 <div class="page" id="page-sysinfo">
   <div class="stats-grid" id="sysinfo-stats" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">
-    <div class="stat-box"><div class="stat-num accent" id="si-freq">—</div><div class="stat-lbl">CPU MHz</div></div>
-    <div class="stat-box"><div class="stat-num grn" id="si-heap">—</div><div class="stat-lbl">Heap Livre</div></div>
-    <div class="stat-box"><div class="stat-num yel" id="si-heap-min">—</div><div class="stat-lbl">Heap Mín</div></div>
-    <div class="stat-box"><div class="stat-num accent" id="si-flash">—</div><div class="stat-lbl">Flash</div></div>
-    <div class="stat-box"><div class="stat-num grn" id="si-sketch">—</div><div class="stat-lbl">Sketch</div></div>
-    <div class="stat-box"><div class="stat-num" id="si-uptime">—</div><div class="stat-lbl">Uptime</div></div>
+    <div class="stat-box"><div class="stat-num accent" id="si-freq">-</div><div class="stat-lbl">CPU MHz</div></div>
+    <div class="stat-box"><div class="stat-num grn" id="si-heap">-</div><div class="stat-lbl">Heap Livre</div></div>
+    <div class="stat-box"><div class="stat-num yel" id="si-heap-min">-</div><div class="stat-lbl">Heap Mín</div></div>
+    <div class="stat-box"><div class="stat-num accent" id="si-flash">-</div><div class="stat-lbl">Flash</div></div>
+    <div class="stat-box"><div class="stat-num grn" id="si-sketch">-</div><div class="stat-lbl">Sketch</div></div>
+    <div class="stat-box"><div class="stat-num" id="si-uptime">-</div><div class="stat-lbl">Uptime</div></div>
   </div>
   <div class="card">
     <div class="card-header">
@@ -1007,6 +1030,20 @@ Oi_Fibra</textarea>
 const TOAST_DUR = 5000;
 let targets = JSON.parse(localStorage.getItem('gpm_targets') || '[]');
 let lastStatus = {};
+
+// ── STEALTH MODE ─────────────────────────────────────────────────────────────
+let _stealthOn = false;
+function toggleStealth() {
+  _stealthOn = !_stealthOn;
+  apiPost('/api/system/stealth', { on: _stealthOn });
+  const btn = document.getElementById('btn-stealth');
+  if (btn) {
+    btn.style.color = _stealthOn ? 'var(--green)' : '';
+    btn.title = _stealthOn ? 'Stealth ATIVO - clique para desativar' : 'Stealth Mode - reduz transmissao';
+  }
+  toast(_stealthOn ? 'grn' : 'yel', 'fa-user-ninja',
+    _stealthOn ? 'Stealth Mode ATIVO - TX power reduzido' : 'Stealth Mode desativado');
+}
 
 // ── THEME ────────────────────────────────────────────────────────────────────
 function toggleTheme() {
@@ -1116,16 +1153,26 @@ function nav(el, id) {
 // ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 let ws;
 let _prevPmkids = 0, _prevCreds = 0;
+let _wsRetries = 0;
 function wsConnect() {
   ws = new WebSocket('ws://' + location.host + '/ws');
   ws.onopen = () => {
+    _wsRetries = 0;
     document.getElementById('ws-dot').classList.add('on');
     document.getElementById('ws-status').textContent = 'conectado';
+    document.getElementById('ws-status').style.color = 'var(--green)';
   };
   ws.onclose = () => {
+    _wsRetries++;
     document.getElementById('ws-dot').classList.remove('on');
-    document.getElementById('ws-status').textContent = 'reconectando...';
-    setTimeout(wsConnect, 3000);
+    document.getElementById('ws-status').textContent = 'reconectando #' + _wsRetries;
+    document.getElementById('ws-status').style.color = 'var(--red)';
+    const delay = Math.min(3000 * _wsRetries, 15000);
+    setTimeout(wsConnect, delay);
+  };
+  ws.onerror = () => {
+    document.getElementById('ws-status').textContent = 'erro WS';
+    document.getElementById('ws-status').style.color = 'var(--orange)';
   };
   ws.onmessage = e => {
     try {
@@ -1135,6 +1182,19 @@ function wsConnect() {
     } catch(_) {}
   };
 }
+
+// ── KEYBOARD SHORTCUTS ─────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key.toLowerCase();
+  // Alt+S = scan, Alt+D = stop deauth, Alt+N = nuclear stop, Alt+L = ir logs
+  if (e.altKey && key === 's') { e.preventDefault(); document.querySelector('[onclick*="scanStart"]')?.click(); }
+  if (e.altKey && key === 'd') { e.preventDefault(); apiPost('/api/deauth/stop').then(() => toast('grn','fa-stop','Deauth parado')); }
+  if (e.altKey && key === 'n') { e.preventDefault(); nuclearStop(); }
+  if (e.altKey && key === 'l') { e.preventDefault(); const el=document.querySelector('[data-page="console"]'); el&&nav(el,'console'); }
+  // Esc = fechar qualquer modal aberto
+  if (key === 'escape') document.querySelectorAll('.modal-overlay').forEach(m=>m.style.display='none');
+});
 
 function appendLog(lvl, ts, msg) {
   const body = document.getElementById('con-body');
@@ -1175,7 +1235,7 @@ function applyStatus(s) {
   setText('sn-mgmt', s.mgmt||0);
   setText('sn-data', s.data||0);
   setText('sn-pps', s.pkt_per_sec||0);
-  setText('sn-ch-cur', s.channel ? 'CH'+s.channel : '—');
+  setText('sn-ch-cur', s.channel ? 'CH'+s.channel : '-');
 
   setText('ss-aps', s.aps||0);
   setText('ss-cli', s.clients||0);
@@ -1216,12 +1276,15 @@ function applyStatus(s) {
     setText('hid-revealed', s.hidden_count);
   }
 
-  // Toast notifications
+  // Toast notifications + alerta sonoro
   if ((s.pmkids||0) > _prevPmkids) {
-    toast('grn', 'fa-database', 'PMKID capturado! ' + s.pmkids + ' total');
+    _playAlert();
+    toast('grn', 'fa-database', 'PMKID capturado! Total: ' + s.pmkids);
   }
   if ((s.creds||0) > _prevCreds) {
+    _playAlert();
     toast('red', 'fa-key', 'Credencial capturada! Verifique Evil Twin.');
+    loadCreds();
   }
   _prevPmkids = s.pmkids||0;
   _prevCreds  = s.creds||0;
@@ -1247,6 +1310,7 @@ async function apiPost(url, body) {
 async function apiGet(url) { return (await fetch(url)).json(); }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg) { toast('grn', 'fa-check', msg); }
 function toast(type, icon, msg) {
   const wrap = document.getElementById('toasts');
   const el = document.createElement('div');
@@ -1311,7 +1375,7 @@ function renderAPTable(data) {
     const authBadge = ap.auth===0 ? 'badge-grn' : ap.auth>=3 ? 'badge-red' : 'badge-yel';
     const dist = rssiToDistance(ap.rssi);
     const qual = pct;
-    const vendor = ouiLookup(ap.bssid) || '<span style="color:var(--muted)">—</span>';
+    const vendor = ouiLookup(ap.bssid) || '<span style="color:var(--muted)">-</span>';
     const rssiColor = ap.rssi > -60 ? 'var(--green)' : ap.rssi > -75 ? 'var(--yel)' : 'var(--red)';
     const hiddenBadge = ap.hidden ? '<span class="badge badge-yel" style="font-size:.55rem;margin-left:3px">HIDDEN</span>' : '';
     const wpsBadge = ap.wps ? '<span class="badge badge-red" style="font-size:.55rem;margin-left:3px">WPS</span>' : '';
@@ -1359,13 +1423,13 @@ async function wifiScan() {
     const vendor = ouiLookup(c.mac);
     const probesHtml = (c.probes||[]).length > 0
       ? (c.probes||[]).map(p=>`<span style="background:var(--surface2);border-radius:3px;padding:1px 4px;margin:1px;font-size:.6rem;display:inline-block">${esc(p)}</span>`).join('')
-      : '<span style="color:var(--muted);font-size:.6rem">—</span>';
+      : '<span style="color:var(--muted);font-size:.6rem">-</span>';
     const dist = rssiToDistance(c.rssi);
     const rssiColor = c.rssi > -60 ? 'var(--green)' : c.rssi > -75 ? 'var(--yel)' : 'var(--red)';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="mono" style="font-size:.7rem">${c.mac}</td>
-      <td style="font-size:.65rem;color:var(--cyan)">${vendor||'—'}</td>
+      <td style="font-size:.65rem;color:var(--cyan)">${vendor||'-'}</td>
       <td class="mono" style="font-size:.65rem;color:var(--muted)">${c.ap}</td>
       <td><span style="color:${rssiColor}">${c.rssi}dBm</span> <span style="color:var(--muted);font-size:.65rem">${dist}</span></td>
       <td style="max-width:220px;white-space:normal">${probesHtml}</td>`;
@@ -1404,13 +1468,13 @@ function quickAttack(bssid, channel) {
   if (el) nav(el, 'deauth');
 }
 function fillFromSel() {
-  if (!_selAP) { toast('yel','fa-crosshairs','Nenhum AP selecionado — use o Scanner'); return; }
+  if (!_selAP) { toast('yel','fa-crosshairs','Nenhum AP selecionado - use o Scanner'); return; }
   document.getElementById('d-bssid').value = _selAP.bssid;
   document.getElementById('d-ch').value = _selAP.channel;
   toast('grn','fa-crosshairs','AP carregado: ' + (_selAP.ssid||_selAP.bssid));
 }
 function fillETFromSel() {
-  if (!_selAP) { toast('yel','fa-crosshairs','Nenhum AP selecionado — use o Scanner'); return; }
+  if (!_selAP) { toast('yel','fa-crosshairs','Nenhum AP selecionado - use o Scanner'); return; }
   document.getElementById('et-ssid').value = _selAP.ssid || '';
   document.getElementById('et-ch').value = _selAP.channel;
   toast('grn','fa-crosshairs','AP carregado: ' + (_selAP.ssid||_selAP.bssid));
@@ -1449,9 +1513,9 @@ renderTargets();
 // ── DEAUTH ────────────────────────────────────────────────────────────────────
 let _deauthIntensity = 1;
 const _intensityDesc = [
-  'Suave: 16 frames/ciclo — mínima visibilidade, menor efetividade',
-  'Normal: 64 frames/ciclo — balanceia efetividade e estabilidade',
-  'Agressivo: 128 frames/ciclo — máxima efetividade, pode causar instabilidade no AP'
+  'Suave: 16 frames/ciclo - mínima visibilidade, menor efetividade',
+  'Normal: 64 frames/ciclo - balanceia efetividade e estabilidade',
+  'Agressivo: 128 frames/ciclo - máxima efetividade, pode causar instabilidade no AP'
 ];
 function setDeauthIntensity(v) {
   _deauthIntensity = v;
@@ -1494,7 +1558,7 @@ async function loadSysInfo() {
   const tb = document.getElementById('sysinfo-table');
   if (!tb) return;
   tb.innerHTML = rows.map(([k,v]) =>
-    `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 4px;color:var(--muted);width:40%">${k}</td><td class="mono" style="padding:6px 4px">${v||'—'}</td></tr>`
+    `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 4px;color:var(--muted);width:40%">${k}</td><td class="mono" style="padding:6px 4px">${v||'-'}</td></tr>`
   ).join('');
 }
 
@@ -1527,17 +1591,24 @@ async function loadHsStates() {
       : s.crackable
         ? '<span class="badge badge-yel">CRACKABLE</span>'
         : '<span class="badge">parcial</span>';
+    const vendor = ouiLookup(s.bssid);
+    const rowBg = s.complete ? 'rgba(34,197,94,.07)' : s.crackable ? 'rgba(250,204,21,.05)' : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="mono" style="font-size:.7rem">${s.bssid}</td><td class="mono" style="font-size:.7rem">${s.client}</td>
+    tr.style.background = rowBg;
+    tr.innerHTML = `<td class="mono" style="font-size:.7rem">${s.bssid}${vendor?` <span style="color:var(--cyan);font-size:.6rem">${vendor}</span>`:''}
+        <button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem" onclick="navigator.clipboard.writeText('${s.bssid}');showToast('BSSID copiado')"><i class="fa-solid fa-copy"></i></button></td>
+      <td class="mono" style="font-size:.7rem">${s.client}</td>
       <td>${m}</td><td>${statusBadge}</td><td>${fmtTs(s.ts)}</td>`;
     tb.appendChild(tr);
-    // Toast quando fica crackable pela primeira vez
+    // Toast + som quando fica crackable pela primeira vez
     if (s.crackable && !_prevCrackable.has(s.bssid)) {
       _prevCrackable.add(s.bssid);
+      _playAlert();
       toast('yel','fa-key','Handshake CRACKABLE: ' + s.bssid);
     }
     if (s.complete && !_prevCrackable.has(s.bssid+'_full')) {
       _prevCrackable.add(s.bssid+'_full');
+      _playAlert();
       toast('green','fa-trophy','Handshake COMPLETO: ' + s.bssid);
     }
   });
@@ -1545,7 +1616,7 @@ async function loadHsStates() {
 async function exportHsStates() {
   const states = await apiGet('/api/sniffer/states');
   if (!states || states.length === 0) { toast('yel','fa-triangle-exclamation','Nenhum handshake para exportar'); return; }
-  let txt = '# Ghost Predator — Handshake States Export\n';
+  let txt = '# Ghost Predator - Handshake States Export\n';
   txt += '# ' + new Date().toLocaleString('pt-BR') + '\n';
   txt += '# BSSID | Client | M1 M2 M3 M4 | Status\n\n';
   states.forEach(s => {
@@ -1564,6 +1635,25 @@ async function exportHsStates() {
   a.download = 'handshake_states.txt';
   a.click();
   toast('grn','fa-download','Exportado handshake_states.txt');
+}
+
+function exportProbes() {
+  if (!_probeData || !_probeData.length) { toast('yel','fa-triangle-exclamation','Nenhum probe para exportar'); return; }
+  const byMac = {};
+  _probeData.forEach(p => {
+    if (!byMac[p.mac]) byMac[p.mac] = [];
+    if (p.ssid && !byMac[p.mac].includes(p.ssid)) byMac[p.mac].push(p.ssid);
+  });
+  let txt = '# Ghost Predator - Probe Requests Export\n# ' + new Date().toLocaleString('pt-BR') + '\n\n';
+  Object.entries(byMac).forEach(([mac, ssids]) => {
+    txt += `MAC: ${mac}  Vendor: ${ouiLookup(mac)||'?'}\n`;
+    ssids.forEach(s => txt += `  SSID: ${s}\n`);
+    txt += '\n';
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], {type:'text/plain'}));
+  a.download = 'probes.txt'; a.click();
+  toast('grn','fa-download','Exportado probes.txt');
 }
 
 async function loadSnifferData() {
@@ -1591,38 +1681,116 @@ async function loadSnifferData() {
 }
 setInterval(() => { if (lastStatus.sniffer) { loadSnifferData(); loadHsStates(); } }, 5000);
 
+let _probeData = [];
+let _probeView = 'flat';
+function setProbeView(v) {
+  _probeView = v;
+  document.getElementById('probe-flat-view').style.display = v === 'flat' ? '' : 'none';
+  document.getElementById('probe-grouped-view').style.display = v === 'grouped' ? '' : 'none';
+  document.getElementById('probe-btn-flat').classList.toggle('btn-active', v === 'flat');
+  document.getElementById('probe-btn-grouped').classList.toggle('btn-active', v === 'grouped');
+  renderProbes(_probeData);
+}
 async function loadProbes() {
-  const pr = await apiGet('/api/sniffer/probes');
-  const tbpr = document.getElementById('t-probes');
-  tbpr.innerHTML = '';
-  pr.forEach(p => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="mono">${p.mac}</td><td><b>${esc(p.ssid)||'<wildcard>'}</b></td>
-      <td>${p.rssi}dBm</td><td>${p.ch||'-'}</td>`;
-    tbpr.appendChild(tr);
-  });
+  _probeData = await apiGet('/api/sniffer/probes');
+  renderProbes(_probeData);
+}
+function renderProbes(pr) {
+  if (_probeView === 'flat') {
+    const tbpr = document.getElementById('t-probes');
+    tbpr.innerHTML = '';
+    pr.forEach(p => {
+      const vendor = ouiLookup(p.mac);
+      const rssiColor = p.rssi > -60 ? 'var(--green)' : p.rssi > -75 ? 'var(--yel)' : 'var(--red)';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="mono" style="font-size:.7rem">${p.mac}</td>
+        <td style="font-size:.65rem;color:var(--cyan)">${vendor||'-'}</td>
+        <td><b>${esc(p.ssid)||'<span style="color:var(--muted)">[wildcard]</span>'}</b></td>
+        <td style="color:${rssiColor}">${p.rssi}dBm</td>
+        <td>${p.ch||'-'}</td>
+        <td style="font-size:.65rem;color:var(--muted)">${fmtTs(p.ts||0)}</td>`;
+      tbpr.appendChild(tr);
+    });
+  } else {
+    // Agrupado por MAC
+    const byMac = {};
+    pr.forEach(p => {
+      if (!byMac[p.mac]) byMac[p.mac] = { mac: p.mac, rssi: p.rssi, ssids: [], ts: p.ts||0 };
+      if (p.ssid && !byMac[p.mac].ssids.includes(p.ssid)) byMac[p.mac].ssids.push(p.ssid);
+      if (p.rssi > byMac[p.mac].rssi) byMac[p.mac].rssi = p.rssi;
+      if ((p.ts||0) > byMac[p.mac].ts) byMac[p.mac].ts = p.ts||0;
+    });
+    const el = document.getElementById('probe-grouped-view');
+    el.innerHTML = Object.values(byMac).sort((a,b) => b.rssi - a.rssi).map(d => {
+      const vendor = ouiLookup(d.mac);
+      const rssiColor = d.rssi > -60 ? 'var(--green)' : d.rssi > -75 ? 'var(--yel)' : 'var(--red)';
+      const ssidsHtml = d.ssids.length
+        ? d.ssids.map(s=>`<span style="background:var(--surface2);border-radius:4px;padding:2px 6px;margin:2px;font-size:.65rem;display:inline-block">${esc(s)}</span>`).join('')
+        : '<span style="color:var(--muted);font-size:.65rem">sem SSIDs (wildcard)</span>';
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <span class="mono" style="font-size:.72rem">${d.mac}</span>
+          ${vendor?`<span style="color:var(--cyan);font-size:.65rem">${vendor}</span>`:''}
+          <span style="color:${rssiColor};font-size:.7rem;margin-left:auto">${d.rssi}dBm</span>
+          <span style="color:var(--muted);font-size:.62rem">${fmtTs(d.ts)}</span>
+          <button class="btn btn-ghost" style="padding:2px 6px;font-size:.6rem" onclick="karmaFromProbe('${d.mac}')"><i class="fa-solid fa-radiation"></i> Karma</button>
+        </div>
+        <div>${ssidsHtml}</div>
+      </div>`;
+    }).join('') || '<div style="color:var(--muted);padding:16px;text-align:center">Nenhum probe capturado</div>';
+  }
 }
 
 // ── EVIL TWIN ─────────────────────────────────────────────────────────────────
+let _etCredTimer = null;
 function etStart() {
   const ssid = document.getElementById('et-ssid').value.trim();
   if (!ssid) { toast('yel','fa-triangle-exclamation','Informe o SSID'); return; }
   const ch = parseInt(document.getElementById('et-ch').value)||6;
-  apiPost('/api/eviltwin/start', { ssid, channel: ch });
+  const tmpl = parseInt(document.getElementById('et-template').value)||0;
+  apiPost('/api/eviltwin/start', { ssid, channel: ch, template: tmpl });
   toast('red','fa-user-secret','Evil Twin ativo: ' + ssid);
+  // Auto-polling de creds a cada 5s enquanto ativo
+  clearInterval(_etCredTimer);
+  _etCredTimer = setInterval(() => { if (lastStatus.eviltwin) loadCreds(); }, 5000);
 }
+function etStop() {
+  apiPost('/api/eviltwin/stop');
+  clearInterval(_etCredTimer); _etCredTimer = null;
+  toast('grn','fa-stop','Evil Twin parado');
+}
+let _prevCredCount = 0;
 async function loadCreds() {
   const data = await apiGet('/api/eviltwin/creds');
   const tbody = document.getElementById('t-creds');
   tbody.innerHTML = '';
   setText('cred-cnt', data.length);
+  // Alerta sonoro ao capturar nova credencial
+  if (data.length > _prevCredCount && _prevCredCount > 0) {
+    _playAlert();
+    toast('red','fa-key','Nova credencial capturada: ' + esc(data[data.length-1].ssid));
+  }
+  _prevCredCount = data.length;
   data.forEach(c => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${esc(c.ssid)}</td>
       <td style="color:var(--red);font-weight:600;font-family:var(--font-mono)">${esc(c.pass)}</td>
-      <td class="mono">${c.ip}</td><td>${fmtTs(c.ts)}</td>`;
+      <td class="mono">${c.ip}</td><td>${fmtTs(c.ts)}</td>
+      <td><button class="btn btn-ghost" style="padding:2px 6px;font-size:.6rem" onclick="navigator.clipboard.writeText('${esc(c.pass)}');showToast('Senha copiada')"><i class="fa-solid fa-copy"></i></button></td>`;
     tbody.appendChild(tr);
   });
+}
+function _playAlert() {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    [880, 1100, 880].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = f; g.gain.value = 0.15;
+      o.start(ctx.currentTime + i * 0.12);
+      o.stop(ctx.currentTime + i * 0.12 + 0.1);
+    });
+  } catch(e) {}
 }
 
 // ── BEACON ────────────────────────────────────────────────────────────────────
@@ -1645,6 +1813,13 @@ function beaconStop() {
 }
 
 // ── KARMA ─────────────────────────────────────────────────────────────────────
+function karmaFromProbe(mac) {
+  // Adiciona MAC a allowlist do karma e navega para a pagina karma
+  toast('yel','fa-radiation','Karma ativo para dispositivo: ' + mac);
+  if (!lastStatus.sniffer) apiPost('/api/sniffer/start');
+  apiPost('/api/karma/start');
+  nav(document.querySelector('[data-page="karma"]'), 'karma');
+}
 async function karmaStart() {
   if (!lastStatus.sniffer) await apiPost('/api/sniffer/start');
   await apiPost('/api/karma/start');
@@ -1674,7 +1849,7 @@ async function bleScan() {
     const mfr = lookupMfr(d.mfr);
     const tr = document.createElement('tr');
     tr.innerHTML = `<td class="mono">${d.addr}</td>
-      <td>${esc(d.name||'—')}${mfr?` <span class="badge badge-gray">${mfr}</span>`:''}</td>
+      <td>${esc(d.name||'-')}${mfr?` <span class="badge badge-gray">${mfr}</span>`:''}</td>
       <td>${d.rssi}dBm</td>
       <td><span class="badge ${d.conn?'badge-grn':'badge-red'}">${d.conn?'Sim':'Nao'}</span></td>
       <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:.65rem" onclick="bleEnum('${d.addr}')"><i class="fa-solid fa-code-branch"></i> Enum</button></td>`;
@@ -1685,7 +1860,13 @@ async function bleScan() {
 function lookupMfr(hex) {
   if (!hex || hex.length < 4) return '';
   const id = parseInt(hex.substring(2,4)+hex.substring(0,2), 16);
-  const map = { 0x004C:'Apple', 0x0006:'Microsoft', 0x0075:'Samsung', 0x00E0:'Google', 0x0157:'Xiaomi' };
+  const map = {
+    0x004C:'Apple',    0x0006:'Microsoft', 0x0075:'Samsung',  0x00E0:'Google',
+    0x0157:'Xiaomi',   0x038F:'Oppo',      0x01BE:'Huawei',   0x0171:'Realme',
+    0x01A8:'Fitbit',   0x0087:'Garmin',    0x00D0:'Bose',     0x002D:'JBL',
+    0x001D:'Sony',     0x00E4:'LG',        0x0059:'Nordic',   0x0082:'Tile',
+    0x0101:'Logitech', 0x0131:'Govee',     0x0C74:'Amazfit',  0x000D:'Texas Instruments'
+  };
   return map[id] || '';
 }
 async function bleEnum(addr) {
@@ -1702,7 +1883,7 @@ async function bleEnum(addr) {
 let _fisherInterval = null;
 function fisherFromScan() {
   const lines = _apList.filter(a => a.auth > 0).map(a => `${a.bssid},${a.ssid},${a.channel}`).join('\n');
-  document.getElementById('fisher-targets').value = lines || '# Nenhum AP WPA2 encontrado — execute o scanner primeiro';
+  document.getElementById('fisher-targets').value = lines || '# Nenhum AP WPA2 encontrado - execute o scanner primeiro';
 }
 function fisherStart() {
   const raw = document.getElementById('fisher-targets').value;
@@ -1737,7 +1918,7 @@ async function updateFisherUI() {
 // ── WPS SCANNER ───────────────────────────────────────────────────────────────
 async function wpsStart() {
   await apiPost('/api/wps/start');
-  toast('yel','fa-key','WPS Scanner ativo — aguardando beacons');
+  toast('yel','fa-key','WPS Scanner ativo - aguardando beacons');
   setTimeout(loadWPS, 5000);
 }
 async function loadWPS() {
@@ -1751,13 +1932,18 @@ async function loadWPS() {
     const pin = r.pin ? '<span class="badge badge-red">PIN-VULN</span>' : '';
     const pbc = r.pbc ? '<span class="badge badge-grn">PBC</span>' : '';
     const tr = document.createElement('tr');
+    const dist = rssiToDistance(r.rssi);
     tr.innerHTML = `<td><b>${esc(r.ssid)}</b></td>
-      <td class="mono">${r.bssid}</td>
+      <td class="mono" style="font-size:.7rem">${r.bssid}</td>
       <td>${r.channel}</td>
       <td><span class="badge ${r.version==='1.0'?'badge-red':'badge-yel'}">v${r.version}</span></td>
       <td>${r.methods}</td>
-      <td>${r.rssi}dBm</td>
-      <td>${locked}${pin}${pbc}</td>`;
+      <td><span style="color:${r.rssi>-70?'var(--green)':'var(--yel)'}">${r.rssi}dBm</span> <span style="color:var(--muted);font-size:.65rem">${dist}</span></td>
+      <td>${locked}${pin}${pbc}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-danger" style="padding:3px 8px;font-size:.6rem" title="Deauth + captura handshake" onclick="quickAttack('${r.bssid}',${r.channel})"><i class="fa-solid fa-bolt"></i></button>
+        <button class="btn btn-ghost" style="padding:3px 8px;font-size:.6rem" title="Selecionar como alvo" onclick="selectAP('${esc(r.ssid)}','${r.bssid}',${r.channel})"><i class="fa-solid fa-crosshairs"></i></button>
+      </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -1854,33 +2040,59 @@ function copyAllLogs() {
 // ── NUCLEAR ───────────────────────────────────────────────────────────────────
 let _nucTimer = null;
 
+function _nucSetPhase(n, active, detail) {
+  const icon = document.getElementById('nuc-icon-'+n);
+  const stat = document.getElementById('nuc-stat-'+n);
+  const row  = document.getElementById('nuc-phase-'+n);
+  if (!icon) return;
+  if (active) {
+    icon.style.color = 'var(--green)';
+    icon.className = 'fa-solid fa-circle-check';
+    row.style.background = 'rgba(34,197,94,.07)';
+  }
+  if (stat && detail) stat.textContent = detail;
+}
+
 async function nuclearStart() {
-  // Auto-scan se não há alvos
   if (!_apList || _apList.length === 0) {
-    toast('yel','fa-spinner','Sem alvos — executando scan automático...');
+    toast('yel','fa-spinner','Sem alvos - executando scan automatico...');
     await wifiScan();
   }
   const r = await (await apiPost('/api/nuclear/start')).json();
   if (r.ok) {
     setText('nuc-targets', r.targets||0);
     document.getElementById('nuclear-status').style.display = 'block';
-    setText('nuclear-msg', 'Nuclear ativo — ' + (r.targets||0) + ' alvos WPA2 em ataque');
+    setText('nuclear-msg', 'Nuclear ativo - ' + (r.targets||0) + ' alvos WPA2 em ataque');
     setBadge('ab-nuclear', true);
     toast('red','fa-biohazard','Nuclear iniciado! ' + (r.targets||0) + ' alvos WPA2');
+    _nucSetPhase(1, true, 'Sniffer ativo - channel hopping em progresso');
+    _nucSetPhase(2, true, 'Deauth enviando para ' + (r.targets||0) + ' APs WPA2');
+    _nucSetPhase(3, true, 'PMKID Fisher ativo - Auth+Assoc forcados');
+    _nucSetPhase(4, true, 'Karma Attack ativo - respondendo probe requests');
     _nucTimer = setInterval(_nucLiveUpdate, 2000);
-  } else toast('yel','fa-triangle-exclamation','Nuclear falhou — nenhuma rede WPA2 encontrada');
+  } else toast('yel','fa-triangle-exclamation','Nuclear falhou - nenhuma rede WPA2 encontrada');
 }
 
 async function _nucLiveUpdate() {
   try {
-    const [hs, pm, states] = await Promise.all([
+    const [hs, pm, states, status] = await Promise.all([
       apiGet('/api/sniffer/handshakes'),
       apiGet('/api/sniffer/pmkids'),
-      apiGet('/api/sniffer/states')
+      apiGet('/api/sniffer/states'),
+      apiGet('/api/status')
     ]);
-    setText('nuc-hs', hs ? hs.length : 0);
-    setText('nuc-pm', pm ? pm.length : 0);
+    const hsLen = hs ? hs.length : 0;
+    const pmLen = pm ? pm.length : 0;
+    setText('nuc-hs', hsLen);
+    setText('nuc-pm', pmLen);
     if (states) setText('nuc-creds', states.filter(s => s.crackable).length);
+    if (status) {
+      _nucSetPhase(1, status.sniffer, 'Pacotes: ' + (status.packets||0) + ' | pkt/s: ' + (status.pkt_per_sec||0));
+      _nucSetPhase(2, status.deauth,  'Frames enviados: ' + (status.deauth_frames||0));
+      _nucSetPhase(3, status.pmkid_fisher, 'PMKIDs: ' + pmLen + ' | Tentativas: ' + (status.fisher_attempts||0));
+      _nucSetPhase(4, status.karma,   'Respostas karma: ' + (status.karma_count||0));
+    }
+    if (hsLen > 0) loadCreds();
   } catch(e) {}
 }
 
@@ -1900,7 +2112,7 @@ async function hiddenLoad() {
 }
 async function hiddenStart() {
   await apiPost('/api/hidden/start');
-  toast('grn','fa-eye-slash','Hidden Scanner ativo — enviando probes...');
+  toast('grn','fa-eye-slash','Hidden Scanner ativo - enviando probes...');
   setTimeout(loadHiddenResults, 3000);
 }
 async function loadHiddenResults() {
@@ -2059,3 +2271,4 @@ function fmtB(b){ return b>1024?(b/1024).toFixed(0)+'KB':b+'B'; }
 </script>
 </body>
 </html>
+
