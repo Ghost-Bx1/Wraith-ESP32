@@ -34,7 +34,7 @@ public:
         if (client) memcpy(targetClient, client, 6);
         else        memset(targetClient, 0xFF, 6);
         channel       = ch;
-        broadcastMode = (memcmp(client, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 0);
+        broadcastMode = (client == nullptr || memcmp(client, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 0);
         autoCapture   = autoC;
         framesSent    = 0;
         multiMode     = false;

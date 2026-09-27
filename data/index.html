@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ghost Predator Mobile</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237c3aed'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-size='20' fill='white'%3E👻%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -301,13 +302,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="atk-badge" id="ab-nuclear"><i class="fa-solid fa-biohazard"></i> NUCLEAR</div>
   </div>
   <div id="topbar-right">
-    <div class="sys-chip" id="chip-heap">RAM --</div>
-    <div class="sys-chip" id="chip-ch">CH --</div>
-    <div class="sys-chip" id="chip-uptime">00:00:00</div>
+    <div class="sys-chip" id="chip-heap" title="Memória RAM livre">RAM --</div>
+    <div class="sys-chip" id="chip-ch" title="Canal WiFi atual do sniffer">CH --</div>
+    <div class="sys-chip" id="chip-uptime" title="Uptime do dispositivo">00:00:00</div>
+    <button class="icon-btn" id="btn-sound" onclick="toggleSound()" title="Alertas sonoros (ativo)"><i class="fa-solid fa-volume-high" id="sound-icon"></i></button>
     <button class="icon-btn" id="btn-stealth" onclick="toggleStealth()" title="Stealth Mode - reduz transmissao e atividade visivel"><i class="fa-solid fa-user-ninja"></i></button>
-    <button class="icon-btn" onclick="toggleTheme()" title="Alternar tema"><i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i></button>
-    <button class="icon-btn" onclick="openChpass()" title="Alterar senha"><i class="fa-solid fa-key"></i></button>
-    <button class="icon-btn" onclick="doLogout()" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+    <button class="icon-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro"><i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i></button>
+    <button class="icon-btn" onclick="openChpass()" title="Alterar senha do painel"><i class="fa-solid fa-key"></i></button>
+    <button class="icon-btn" onclick="doLogout()" title="Sair (logout)"><i class="fa-solid fa-right-from-bracket"></i></button>
   </div>
 </div>
 
@@ -374,6 +376,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
         <input type="text" placeholder="Filtrar..." oninput="filterAPs(this.value)"
           style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--fg);padding:3px 8px;font-size:.7rem;width:130px">
+        <button class="btn btn-ghost" style="padding:3px 8px;font-size:.65rem" title="Exportar tabela como CSV" onclick="exportScanCSV()"><i class="fa-solid fa-file-csv"></i> CSV</button>
         <span style="font-size:.65rem;color:var(--muted)" id="scan-ts"></span>
       </div>
     </div>
@@ -391,8 +394,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       <th onclick="sortAPs('rssi')" style="cursor:pointer" title="Ordenar por RSSI">RSSI ↕</th>
       <th>Dist.</th><th>Vendor</th>
       <th onclick="sortAPs('auth')" style="cursor:pointer" title="Ordenar por segurança">Auth ↕</th>
+      <th title="Clientes associados detectados">Cli.</th>
       <th>Ação</th>
-    </tr></thead><tbody id="t-aps"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">Clique em Escanear</td></tr></tbody></table>
+    </tr></thead><tbody id="t-aps"><tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px">Clique em Escanear</td></tr></tbody></table>
     </div>
   </div>
   <div class="card">
@@ -661,7 +665,8 @@ Oi_Fibra</textarea>
     <div class="card-header">
       <div class="card-icon orange"><i class="fa-solid fa-list"></i></div>
       <div class="card-title">SSIDs Respondidos</div>
-      <span class="badge badge-yel" id="karma-cnt" style="margin-left:auto">0</span>
+      <span class="badge badge-yel" id="karma-cnt" style="margin-left:auto" title="SSIDs únicos respondidos">0</span>
+      <span class="badge badge-cyan" id="karma-known-cnt" style="margin-left:6px" title="SSIDs conhecidos (coletados de probes — usados pelo MANA)">0 conhecidos</span>
     </div>
     <div id="karma-list" style="color:var(--muted);font-size:.78rem;padding:8px 0">Nenhum ainda.</div>
   </div>
@@ -1079,10 +1084,18 @@ Oi_Fibra</textarea>
     <div class="con-dot" id="ws-dot"></div>
     <div id="con-title">Console &mdash; Tempo Real</div>
     <span id="ws-status" style="font-size:.65rem;color:var(--muted);margin-left:6px">desconectado</span>
-    <div style="margin-left:auto;display:flex;gap:6px">
-      <button class="btn btn-ghost" style="padding:2px 8px;font-size:.65rem" onclick="clearConsole()"><i class="fa-solid fa-trash"></i></button>
+    <div style="margin-left:auto;display:flex;gap:4px;align-items:center">
+      <span style="font-size:.6rem;color:var(--muted);margin-right:2px">Nível:</span>
+      <button id="con-f-all" class="btn btn-ghost" style="padding:1px 6px;font-size:.6rem;border-color:var(--accent);color:var(--accent)" onclick="setConFilter(-1)" title="Mostrar todos os níveis">ALL</button>
+      <button id="con-f-err" class="btn btn-ghost" style="padding:1px 6px;font-size:.6rem" onclick="setConFilter(2)" title="Apenas erros"><i class="fa-solid fa-circle-xmark" style="color:var(--red)"></i></button>
+      <button id="con-f-warn" class="btn btn-ghost" style="padding:1px 6px;font-size:.6rem" onclick="setConFilter(1)" title="Apenas avisos"><i class="fa-solid fa-triangle-exclamation" style="color:var(--yellow)"></i></button>
+      <button id="con-f-ok" class="btn btn-ghost" style="padding:1px 6px;font-size:.6rem" onclick="setConFilter(3)" title="Apenas sucesso"><i class="fa-solid fa-circle-check" style="color:var(--green)"></i></button>
+      <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
+      <button id="con-pause-btn" class="btn btn-ghost" style="padding:1px 6px;font-size:.6rem" onclick="toggleConPause()" title="Pausar/retomar scroll automático"><i class="fa-solid fa-pause" id="con-pause-icon"></i></button>
+      <button class="btn btn-ghost" style="padding:1px 6px;font-size:.65rem" onclick="clearConsole()" title="Limpar console"><i class="fa-solid fa-trash"></i></button>
     </div>
   </div>
+  <div id="con-resize-handle" style="height:5px;cursor:ns-resize;background:transparent;border-top:1px solid var(--border);flex-shrink:0" title="Arraste para redimensionar o console"></div>
   <div id="ws-offline-bar"><i class="fa-solid fa-wifi" style="margin-right:4px"></i>WiFi/WS desconectado — tentando reconectar... logs podem estar incompletos</div>
   <div id="con-body"></div>
 </div>
@@ -1098,6 +1111,17 @@ Oi_Fibra</textarea>
 const TOAST_DUR = 5000;
 let targets = JSON.parse(localStorage.getItem('gpm_targets') || '[]');
 let lastStatus = {};
+
+// ── SOUND TOGGLE ─────────────────────────────────────────────────────────────
+let _soundMuted = false;
+function toggleSound() {
+  _soundMuted = !_soundMuted;
+  localStorage.setItem('gpm_muted', _soundMuted);
+  document.getElementById('sound-icon').className = _soundMuted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+  document.getElementById('btn-sound').style.color = _soundMuted ? 'var(--red)' : '';
+  document.getElementById('btn-sound').title = _soundMuted ? 'Alertas sonoros (mudo — clique para ativar)' : 'Alertas sonoros (ativo)';
+}
+(function(){ _soundMuted = localStorage.getItem('gpm_muted')==='true'; if (_soundMuted) toggleSound(); })();
 
 // ── STEALTH MODE ─────────────────────────────────────────────────────────────
 let _stealthOn = false;
@@ -1293,15 +1317,16 @@ document.addEventListener('keydown', e => {
 
 let _lastLogMsg = '';
 function appendLog(lvl, ts, msg) {
-  if (msg === _lastLogMsg) return; // deduplica mensagens consecutivas idênticas
+  if (msg === _lastLogMsg) return;
   _lastLogMsg = msg;
   const body = document.getElementById('con-body');
   const line = document.createElement('div');
   line.className = 'll';
   line.innerHTML = `<span class="ll-ts">${fmtTs(ts)}</span><span class="ll-msg l${lvl}">${esc(msg)}</span>`;
+  if (_conLevelFilter >= 0 && _conLevelFilter !== lvl) line.style.display = 'none';
   body.appendChild(line);
   if (body.children.length > 600) body.removeChild(body.firstChild);
-  body.scrollTop = body.scrollHeight;
+  if (!_conPaused) body.scrollTop = body.scrollHeight;
 }
 function clearConsole() {
   document.getElementById('con-body').innerHTML = '';
@@ -1373,6 +1398,7 @@ function applyStatus(s) {
   setText('intel-http', s.intel_http||0);
   showCount('sc-wps', s.wps_count, s.wps_count > 0);
   showCount('sc-fisher', s.pmkids, s.pmkids > 0);
+  if (s.karma_known !== undefined) setText('karma-known-cnt', (s.karma_known||0) + ' conhecidos');
   showCount('sc-intel', s.intel_devs, s.intel_devs > 0);
   setBadge('ab-deauth', s.deauth || s.deauth_multi);
   if (s.pmkid_fisher) setBadge('ab-sniffer', true);
@@ -1425,10 +1451,79 @@ function toast(type, icon, msg) {
   const wrap = document.getElementById('toasts');
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.innerHTML = `<i class="fa-solid fa-${icon}"></i><span>${esc(msg)}</span>`;
+  el.innerHTML = `<i class="fa-solid fa-${icon}"></i><span>${esc(msg)}</span><button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:0 0 0 8px" title="Fechar">&times;</button>`;
   wrap.appendChild(el);
-  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(), 300); }, TOAST_DUR);
+  const tid = setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(), 300); }, TOAST_DUR);
+  el.addEventListener('click', e => { if (e.target.tagName !== 'BUTTON') { clearTimeout(tid); el.remove(); } });
 }
+
+// ── SCANNER CSV EXPORT ────────────────────────────────────────────────────────
+function exportScanCSV() {
+  if (!_apList || !_apList.length) { toast('yel','fa-triangle-exclamation','Execute um scan primeiro'); return; }
+  const hdr = 'SSID,BSSID,Channel,RSSI,Auth,Vendor,Clients,WPS\n';
+  const rows = _apList.map(ap => [
+    '"'+((ap.ssid||'').replace(/"/g,'""'))+'"',
+    ap.bssid, ap.channel, ap.rssi,
+    ['Open','WEP','WPA','WPA2','WPA/WPA2','WPA3'][ap.auth]||ap.auth,
+    '"'+(ouiLookup(ap.bssid)||'')+'"',
+    ap.clients||0, ap.wps?'Yes':'No'
+  ].join(',')).join('\n');
+  const blob = new Blob([hdr+rows], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'scan_'+new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')+'.csv'; a.click();
+  toast('grn','fa-file-csv','Exportado '+_apList.length+' APs como CSV');
+}
+
+// ── CONSOLE FILTER + PAUSE ────────────────────────────────────────────────────
+let _conLevelFilter = -1; // -1 = all
+let _conPaused = false;
+function setConFilter(lvl) {
+  _conLevelFilter = lvl;
+  // Update button styles
+  ['all','err','warn','ok'].forEach(k => {
+    const btn = document.getElementById('con-f-'+k);
+    if (btn) { btn.style.borderColor = ''; btn.style.color = ''; }
+  });
+  const map = {'-1':'all','2':'err','1':'warn','3':'ok'};
+  const active = document.getElementById('con-f-'+map[String(lvl)]);
+  if (active) { active.style.borderColor = 'var(--accent)'; active.style.color = 'var(--accent)'; }
+  // Re-render visible lines
+  const lines = document.getElementById('con-body').querySelectorAll('.ll');
+  lines.forEach(l => {
+    if (lvl < 0) { l.style.display = ''; return; }
+    const msg = l.querySelector('.ll-msg');
+    const curLvl = msg ? [...msg.classList].find(c=>c.startsWith('l')) : null;
+    l.style.display = (curLvl === 'l'+lvl) ? '' : 'none';
+  });
+}
+function toggleConPause() {
+  _conPaused = !_conPaused;
+  const icon = document.getElementById('con-pause-icon');
+  const btn = document.getElementById('con-pause-btn');
+  if (icon) icon.className = _conPaused ? 'fa-solid fa-play' : 'fa-solid fa-pause';
+  if (btn) { btn.title = _conPaused ? 'Retomar scroll automático' : 'Pausar scroll automático'; btn.style.color = _conPaused ? 'var(--yellow)' : ''; }
+}
+
+// ── CONSOLE RESIZE HANDLE ─────────────────────────────────────────────────────
+(function(){
+  const handle = document.getElementById('con-resize-handle');
+  const wrap = document.getElementById('console-wrap');
+  if (!handle || !wrap) return;
+  let startY, startH;
+  handle.addEventListener('mousedown', e => {
+    startY = e.clientY; startH = wrap.offsetHeight;
+    const onMove = ev => {
+      const delta = startY - ev.clientY;
+      const newH = Math.max(80, Math.min(600, startH + delta));
+      wrap.style.height = newH + 'px';
+      document.getElementById('layout').style.gridTemplateRows = '1fr ' + newH + 'px';
+    };
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
+  });
+})();
 
 // ── WIFI SCAN ─────────────────────────────────────────────────────────────────
 let _apList = [];
@@ -1489,17 +1584,17 @@ function renderAPTable(data) {
     const rssiColor = ap.rssi > -60 ? 'var(--green)' : ap.rssi > -75 ? 'var(--yel)' : 'var(--red)';
     const hiddenBadge = ap.hidden ? '<span class="badge badge-yel" style="font-size:.55rem;margin-left:3px">HIDDEN</span>' : '';
     const wpsBadge = ap.wps ? '<span class="badge badge-red" style="font-size:.55rem;margin-left:3px">WPS</span>' : '';
-    const clientsBadge = ap.clients > 0 ? `<span style="font-size:.65rem;color:var(--cyan);margin-left:4px">${ap.clients}👤</span>` : '';
     const tr = document.createElement('tr');
     tr.dataset.bssid = ap.bssid;
     tr.innerHTML = `
-      <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b>${hiddenBadge}${wpsBadge}${clientsBadge}</td>
+      <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b>${hiddenBadge}${wpsBadge}</td>
       <td class="mono" style="font-size:.7rem">${ap.bssid} <button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem" title="Copiar BSSID" onclick="navigator.clipboard.writeText('${ap.bssid}');showToast('BSSID copiado')"><i class="fa-solid fa-copy"></i></button></td>
       <td style="text-align:center">${ap.channel}</td>
       <td><div class="rssi-pill"><div class="rssi-bar" style="width:${qual/3}px;background:${rssiColor}"></div><span style="color:${rssiColor}">${ap.rssi}dBm</span></div></td>
       <td style="font-size:.7rem;color:var(--cyan)">${dist} <span style="font-size:.6rem;color:var(--muted)">(${qual}%)</span></td>
       <td style="font-size:.65rem;color:var(--muted)">${vendor}</td>
       <td><span class="badge ${authBadge}">${auth}</span></td>
+      <td style="text-align:center;color:var(--cyan);font-size:.72rem">${ap.clients > 0 ? ap.clients : '<span style="color:var(--muted)">-</span>'}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-ghost" style="padding:3px 8px;font-size:.65rem" title="Selecionar alvo" onclick="selectAP('${esc(ap.ssid)}','${ap.bssid}',${ap.channel})"><i class="fa-solid fa-crosshairs"></i></button>
         <button class="btn btn-danger" style="padding:3px 8px;font-size:.65rem" title="Deauth + captura" onclick="quickAttack('${ap.bssid}',${ap.channel})"><i class="fa-solid fa-bolt"></i></button>
@@ -1510,7 +1605,7 @@ function renderAPTable(data) {
 
 async function wifiScan() {
   const tbody = document.getElementById('t-aps');
-  tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:18px"><i class="fa-solid fa-spinner fa-spin"></i> Escaneando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:18px"><i class="fa-solid fa-spinner fa-spin"></i> Escaneando...</td></tr>';
   const data = await apiGet('/api/wifi/scan');
   _apList = data;
   data.sort((a,b) => b.rssi - a.rssi);
@@ -1705,8 +1800,10 @@ async function loadHsStates() {
     const rowBg = s.complete ? 'rgba(34,197,94,.07)' : s.crackable ? 'rgba(250,204,21,.05)' : '';
     const tr = document.createElement('tr');
     tr.style.background = rowBg;
+    const hcFmt = s.crackable ? `hashcat -m 22000 pmkids.txt wordlist.txt  # AP:${s.bssid} Client:${s.client}` : '';
     tr.innerHTML = `<td class="mono" style="font-size:.7rem">${s.bssid}${vendor?` <span style="color:var(--cyan);font-size:.6rem">${vendor}</span>`:''}
-        <button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem" onclick="navigator.clipboard.writeText('${s.bssid}');showToast('BSSID copiado')"><i class="fa-solid fa-copy"></i></button></td>
+        <button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem" onclick="navigator.clipboard.writeText('${s.bssid}');showToast('BSSID copiado')" title="Copiar BSSID"><i class="fa-solid fa-copy"></i></button>
+        ${s.crackable ? `<button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem;border-color:var(--yellow)" onclick="navigator.clipboard.writeText('${hcFmt.replace(/'/g,"\\'")}');showToast('Cmd hashcat copiado')" title="Copiar comando hashcat"><i class="fa-solid fa-terminal" style="color:var(--yellow)"></i></button>` : ''}</td>
       <td class="mono" style="font-size:.7rem">${s.client}</td>
       <td>${m}</td><td>${statusBadge}</td><td>${fmtTs(s.ts)}</td>`;
     tb.appendChild(tr);
@@ -1891,6 +1988,7 @@ async function loadCreds() {
   });
 }
 function _playAlert() {
+  if (_soundMuted) return;
   try {
     const ctx = new (window.AudioContext||window.webkitAudioContext)();
     [880, 1100, 880].forEach((f, i) => {
@@ -2218,9 +2316,14 @@ async function wifiteRefresh() {
   const prog = d.total ? Math.round((d.cur / d.total) * 100) : 0;
   document.getElementById('wf-bar').style.width    = prog + '%';
   const stateNames = ['Parado','Scan','PMKID Fisher','Deauth+HS','Evil Twin','Concluido'];
+  const stateTimeouts = [0, 0, d.pmkid_timeout||30, d.deauth_timeout||60, 120, 0];
   const cur = d.targets && d.targets[d.cur];
+  const elapsed = d.phase_elapsed || 0;
+  const stateT = stateTimeouts[d.state] || 0;
+  const remaining = stateT > 0 ? Math.max(0, stateT - elapsed) : 0;
+  const countdownStr = (d.running && remaining > 0) ? ` (${remaining}s)` : '';
   document.getElementById('wf-msg').textContent = d.running
-    ? `[${d.cur+1}/${d.total}] ${cur ? cur.ssid : ''} - ${stateNames[d.state]||''}`
+    ? `[${d.cur+1}/${d.total}] ${cur ? cur.ssid : ''} — ${stateNames[d.state]||''}${countdownStr}`
     : (d.state === 5 ? 'Concluido!' : 'Parado');
   // Stats
   let pmkids=0, hs=0, creds=0;
@@ -2477,8 +2580,8 @@ function fmtTs(ms) {
          d.getMinutes().toString().padStart(2,'0')+':'+
          d.getSeconds().toString().padStart(2,'0');
 }
-function fmtUp(ms) {
-  const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60),d=Math.floor(h/24);
+function fmtUp(sec) {
+  const s=sec,m=Math.floor(s/60),h=Math.floor(m/60),d=Math.floor(h/24);
   if (d>0) return d+'d '+pad(h%24)+'h '+pad(m%60)+'m';
   if (h>0) return h+'h '+pad(m%60)+'m '+pad(s%60)+'s';
   if (m>0) return m+'m '+pad(s%60)+'s';

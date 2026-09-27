@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <esp_wifi.h>
 #include <vector>
+#include <unordered_set>
 #include "../utils/logger.h"
 
 /*
@@ -19,7 +20,8 @@ public:
     bool running   = false;
     bool manaMode  = false;   // true = MANA (responde com todos SSIDs conhecidos)
     std::vector<String> respondedTo;
-    std::vector<String> knownSSIDs;  // todos SSIDs vistos em probes
+    std::vector<String> knownSSIDs;       // todos SSIDs vistos em probes (ordenado para iteração)
+    std::unordered_set<String> _knownSet; // lookup O(1)
 
     void start(bool mana = false) {
         running  = true;
@@ -48,9 +50,10 @@ public:
         // Acumula SSIDs conhecidos (usado pelo MANA e pelo Wifite)
         if (ssid && strlen(ssid) > 0) {
             String s = String(ssid);
-            bool found = false;
-            for (auto& k : knownSSIDs) if (k == s) { found = true; break; }
-            if (!found && knownSSIDs.size() < 256) knownSSIDs.push_back(s);
+            if (_knownSet.find(s) == _knownSet.end() && knownSSIDs.size() < 256) {
+                knownSSIDs.push_back(s);
+                _knownSet.insert(s);
+            }
         }
 
         if (manaMode) {

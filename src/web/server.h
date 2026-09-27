@@ -75,12 +75,15 @@ private:
     }
 
     void _setupWebSocket() {
-        ws.onEvent([](AsyncWebSocket*, AsyncWebSocketClient* c,
-                      AwsEventType t, void*, uint8_t*, size_t) {
+        ws.onEvent([](AsyncWebSocket* srv, AsyncWebSocketClient* c,
+                      AwsEventType t, void*, uint8_t* data, size_t len) {
             if (t == WS_EVT_CONNECT)
                 LOG.info("WS #" + String(c->id()) + " conectado");
             else if (t == WS_EVT_DISCONNECT)
                 LOG.info("WS #" + String(c->id()) + " desconectado");
+            else if (t == WS_EVT_DATA && len >= 4 &&
+                     data[0]=='"' && data[1]=='p' && data[2]=='i' && data[3]=='n')
+                c->text("{\"t\":\"pong\"}");
         });
         server.addHandler(&ws);
         LOG.onEntry([](const LogEntry& e) {
@@ -90,7 +93,7 @@ private:
 
     void _fillStatus(JsonDocument& doc) {
         doc["heap"]        = ESP.getFreeHeap();
-        doc["uptime"]      = millis();
+        doc["uptime"]      = millis() / 1000;
         doc["deauth"]      = Deauther::get().running;
         doc["sniffer"]     = Sniffer::get().running;
         doc["eviltwin"]    = EvilTwin::get().running;
@@ -111,6 +114,7 @@ private:
         doc["bledevs"]     = (int)BLEScanner::get().devices.size();
         doc["creds"]       = (int)EvilTwin::get().captured.size();
         doc["karma_count"]    = (int)KarmaAttack::get().respondedTo.size();
+        doc["karma_known"]    = (int)KarmaAttack::get().knownSSIDs.size();
         doc["channel"]        = Sniffer::get().hopChannel;
         doc["deauth_frames"]  = Deauther::get().framesSent;
         doc["pmkid_fisher"]   = PMKIDFisher::get().running;

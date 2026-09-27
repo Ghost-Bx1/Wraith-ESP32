@@ -48,7 +48,6 @@ public:
         running = false;
         // Restaura AP gerencial
         WiFi.softAP(AP_SSID, AP_PASS, AP_CHANNEL);
-        delay(300);
         LOG.info("[ET] Parado. Creds: " + String(captured.size()) +
                  " | AP gerencial restaurado: " AP_SSID);
     }

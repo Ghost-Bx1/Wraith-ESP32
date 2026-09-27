@@ -20,7 +20,7 @@ public:
         LogEntry e{ millis(), lvl, msg };
         _buf.push_back(e);
         if (_buf.size() > MAX_LOG_LINES) _buf.erase(_buf.begin());
-        if (_cb) _cb(e);
+        for (auto& cb : _cbs) cb(e);
         Serial.printf("[%lu] %s\n", e.ts, msg.c_str());
     }
 
@@ -33,11 +33,11 @@ public:
     const std::vector<LogEntry>& entries() const { return _buf; }
     void clear() { _buf.clear(); }
 
-    void onEntry(std::function<void(const LogEntry&)> cb) { _cb = cb; }
+    void onEntry(std::function<void(const LogEntry&)> cb) { _cbs.push_back(cb); }
 
 private:
     std::vector<LogEntry> _buf;
-    std::function<void(const LogEntry&)> _cb;
+    std::vector<std::function<void(const LogEntry&)>> _cbs;
 };
 
 #define LOG Logger::get()
