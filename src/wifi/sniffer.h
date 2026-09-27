@@ -160,6 +160,14 @@ private:
                     if (sl > 0 && sl <= 32 && blen >= (size_t)(2+sl))
                         ssid = String((char*)(body+2)).substring(0, sl);
                 }
+                // Ignora probes originados pelo próprio ESP32
+                {
+                    uint8_t apM[6], staM[6];
+                    esp_wifi_get_mac(WIFI_IF_AP,  apM);
+                    esp_wifi_get_mac(WIFI_IF_STA, staM);
+                    if (memcmp(hdr->a2, apM,  6) == 0) return;
+                    if (memcmp(hdr->a2, staM, 6) == 0) return;
+                }
                 ProbeRequest pr;
                 pr.mac  = WiFiScanner::bssidToStr(hdr->a2);
                 pr.ssid = ssid; pr.rssi = rssi;

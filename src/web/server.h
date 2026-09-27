@@ -496,6 +496,7 @@ private:
                     uint8_t apMac[6], clMac[6];
                     _parseMac(bssid.c_str(), apMac);
                     _parseMac(client.c_str(), clMac);
+                    if (_isSelfMac(apMac)) continue; // nunca atacar a si mesmo
                     Deauther::get().addMultiTarget(apMac, clMac, ch);
                 }
             }
@@ -550,13 +551,17 @@ private:
             std::vector<Deauther::Target> dTargets;
             for (auto& ap : aps) {
                 if ((int)ap.auth >= 3) { // WPA2
+                    uint8_t mac[6]; _parseMac(ap.bssidStr.c_str(), mac);
+                    if (_isSelfMac(mac)) {
+                        LOG.info("[NUCLEAR] Ignorando próprio MAC: " + ap.bssidStr);
+                        continue;
+                    }
                     Deauther::Target t;
-                    _parseMac(ap.bssidStr.c_str(), t.ap);
+                    memcpy(t.ap, mac, 6);
                     memset(t.client, 0xFF, 6);
                     t.channel = ap.channel;
                     dTargets.push_back(t);
                     // 4. Adiciona ao Fisher
-                    uint8_t mac[6]; _parseMac(ap.bssidStr.c_str(), mac);
                     PMKIDFisher::get().addTarget(mac, ap.ssid.c_str(), ap.channel);
                 }
             }
@@ -956,6 +961,20 @@ document.getElementById('pw').addEventListener('keydown',e=>e.key==='Enter'&&sen
 
     static void _parseMac(const char* s, uint8_t* out) {
         sscanf(s,"%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",&out[0],&out[1],&out[2],&out[3],&out[4],&out[5]);
+    }
+
+    // Retorna true se o MAC é da própria placa (AP ou STA) — não atacar a si mesmo
+    static bool _isSelfMac(const uint8_t* mac) {
+        static uint8_t apMac[6]  = {0};
+        static uint8_t staMac[6] = {0};
+        static bool    loaded    = false;
+        if (!loaded) {
+            esp_wifi_get_mac(WIFI_IF_AP,  apMac);
+            esp_wifi_get_mac(WIFI_IF_STA, staMac);
+            loaded = true;
+        }
+        return (memcmp(mac, apMac,  6) == 0 ||
+                memcmp(mac, staMac, 6) == 0);
     }
 
     static String _esc(const String& s) {

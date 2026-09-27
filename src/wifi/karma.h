@@ -25,6 +25,12 @@ public:
 
     void onProbe(const uint8_t* clientMac, const char* ssid, uint8_t ch) {
         if (!running || !ssid || strlen(ssid) == 0) return;
+        // Ignora probes originados pelo próprio ESP32
+        uint8_t apMac[6], staMac[6];
+        esp_wifi_get_mac(WIFI_IF_AP,  apMac);
+        esp_wifi_get_mac(WIFI_IF_STA, staMac);
+        if (memcmp(clientMac, apMac,  6) == 0) return;
+        if (memcmp(clientMac, staMac, 6) == 0) return;
         _sendProbeResponse(clientMac, ssid, ch);
         String s = String(ssid);
         bool found = false;
