@@ -16,6 +16,7 @@
 #include "wifi/wps_scanner.h"
 #include "wifi/target_intel.h"
 #include "wifi/hidden_scanner.h"
+#include "wifi/wifite_mode.h"
 #include "bluetooth/ble_scanner.h"
 #include "bluetooth/bt_classic.h"
 #include "bluetooth/ble_spam.h"
@@ -30,6 +31,7 @@ void attackTask(void*) {
         Radio2::get().tick();
         PMKIDFisher::get().tick();
         HiddenScanner::get().tick();
+        WifiteMode::get().tick();
 
         // Auto-stop deauth quando handshake completo capturado
         if (Deauther::get().running && Deauther::get().autoCapture) {
@@ -61,7 +63,7 @@ void bleTask(void*) {
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n\n=== Ghost Predator Mobile v3.3 ===");
+    Serial.println("\n\n=== Ghost Predator Mobile v3.5 ===");
 
     pinMode(LED_STATUS, OUTPUT);
     digitalWrite(LED_STATUS, LOW);
@@ -108,12 +110,13 @@ void loop() {
     WebServer::get().tick();
 
     static unsigned long lastBlink = 0;
-    bool anyActive = Deauther::get().running   ||
-                     BeaconFlood::get().running ||
-                     Sniffer::get().running     ||
-                     EvilTwin::get().running    ||
-                     KarmaAttack::get().running ||
+    bool anyActive = Deauther::get().running    ||
+                     BeaconFlood::get().running  ||
+                     Sniffer::get().running      ||
+                     EvilTwin::get().running     ||
+                     KarmaAttack::get().running  ||
                      PMKIDFisher::get().running  ||
+                     WifiteMode::get().running   ||
                      BLESpam::get().running;
 
     uint16_t interval = Sniffer::get().running ? 120 : 700;

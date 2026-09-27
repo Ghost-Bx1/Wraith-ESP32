@@ -31,7 +31,8 @@ public:
 
     void start(const uint8_t* ap, const uint8_t* client, uint8_t ch, bool autoC = false) {
         memcpy(targetAP, ap, 6);
-        memcpy(targetClient, client, 6);
+        if (client) memcpy(targetClient, client, 6);
+        else        memset(targetClient, 0xFF, 6);
         channel       = ch;
         broadcastMode = (memcmp(client, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 0);
         autoCapture   = autoC;
