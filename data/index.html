@@ -81,10 +81,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 .icon-btn:hover{color:var(--text);border-color:var(--accent)}
 
 /* ── LAYOUT ───────────────────────────────────────────────────────────────*/
-#layout{flex:1;display:grid;grid-template-columns:220px 1fr;grid-template-rows:1fr 185px;min-height:0}
+#layout{flex:1;display:grid;grid-template-columns:220px 1fr;grid-template-rows:1fr 220px;min-height:0}
 #sidebar{grid-row:1/3;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
 #main{overflow-y:auto;padding:18px;background:var(--bg)}
 #console-wrap{background:var(--bg);border-top:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+#ws-offline-bar{display:none;background:#dc262618;border-bottom:1px solid #dc262640;padding:2px 14px;font-size:.62rem;color:var(--red);text-align:center}
 
 /* ── SIDEBAR ──────────────────────────────────────────────────────────────*/
 .sb-section{padding:12px 12px 4px;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--border)}
@@ -235,7 +236,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <span class="login-badge">v3.3 &nbsp;·&nbsp; ESP32</span>
+      <span class="login-badge">v3.5 &nbsp;·&nbsp; ESP32</span>
       <i class="fa-solid fa-ghost ghost-icon"></i>
       <h1>Ghost <span>Predator</span> Mobile</h1>
       <p>Wireless Security Assessment Platform</p>
@@ -1082,6 +1083,7 @@ Oi_Fibra</textarea>
       <button class="btn btn-ghost" style="padding:2px 8px;font-size:.65rem" onclick="clearConsole()"><i class="fa-solid fa-trash"></i></button>
     </div>
   </div>
+  <div id="ws-offline-bar"><i class="fa-solid fa-wifi" style="margin-right:4px"></i>WiFi/WS desconectado — tentando reconectar... logs podem estar incompletos</div>
   <div id="con-body"></div>
 </div>
 
@@ -1219,23 +1221,47 @@ function nav(el, id) {
 
 // ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 let ws;
-let _curPage = 'dashboard';
+let _curPage = 'scanner';
 let _prevPmkids = 0, _prevCreds = 0;
 let _wsRetries = 0;
+let _wsConnected = false;
+let _wsDisconnectTs = 0;
+let _wsPingTimer = null;
+
 function wsConnect() {
   ws = new WebSocket('ws://' + location.host + '/ws');
   ws.onopen = () => {
     _wsRetries = 0;
+    _wsConnected = true;
     document.getElementById('ws-dot').classList.add('on');
     document.getElementById('ws-status').textContent = 'conectado';
     document.getElementById('ws-status').style.color = 'var(--green)';
+    document.getElementById('ws-offline-bar').style.display = 'none';
+    // Exibe indicador de gap se houve desconexão
+    if (_wsDisconnectTs > 0) {
+      const secs = Math.round((Date.now() - _wsDisconnectTs) / 1000);
+      appendLog(1, Date.now() / 1000, `--- reconectado (${secs}s offline, logs podem estar incompletos) ---`);
+      _wsDisconnectTs = 0;
+    }
+    // Keepalive ping a cada 8s para manter WS vivo durante ataques
+    clearInterval(_wsPingTimer);
+    _wsPingTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try { ws.send('ping'); } catch(_) {}
+      }
+    }, 8000);
   };
   ws.onclose = () => {
     _wsRetries++;
+    _wsConnected = false;
+    if (_wsDisconnectTs === 0) _wsDisconnectTs = Date.now();
+    clearInterval(_wsPingTimer);
     document.getElementById('ws-dot').classList.remove('on');
     document.getElementById('ws-status').textContent = 'reconectando #' + _wsRetries;
     document.getElementById('ws-status').style.color = 'var(--red)';
-    const delay = Math.min(3000 * _wsRetries, 15000);
+    document.getElementById('ws-offline-bar').style.display = 'block';
+    // Primeira tentativa rápida (500ms), depois backoff gradual até 10s
+    const delay = _wsRetries === 1 ? 500 : Math.min(1000 * (_wsRetries - 1), 10000);
     setTimeout(wsConnect, delay);
   };
   ws.onerror = () => {
@@ -1243,6 +1269,7 @@ function wsConnect() {
     document.getElementById('ws-status').style.color = 'var(--orange)';
   };
   ws.onmessage = e => {
+    if (e.data === 'pong') return;
     try {
       const d = JSON.parse(e.data);
       if (d.t === 'log') appendLog(d.lvl, d.ts, d.msg);
@@ -1264,7 +1291,10 @@ document.addEventListener('keydown', e => {
   if (key === 'escape') document.querySelectorAll('.modal-overlay').forEach(m=>m.style.display='none');
 });
 
+let _lastLogMsg = '';
 function appendLog(lvl, ts, msg) {
+  if (msg === _lastLogMsg) return; // deduplica mensagens consecutivas idênticas
+  _lastLogMsg = msg;
   const body = document.getElementById('con-body');
   const line = document.createElement('div');
   line.className = 'll';
@@ -1273,15 +1303,26 @@ function appendLog(lvl, ts, msg) {
   if (body.children.length > 600) body.removeChild(body.firstChild);
   body.scrollTop = body.scrollHeight;
 }
-function clearConsole() { document.getElementById('con-body').innerHTML = ''; }
+function clearConsole() {
+  document.getElementById('con-body').innerHTML = '';
+  _lastLogMsg = '';
+}
 
 // ── STATUS ────────────────────────────────────────────────────────────────────
+let _pollTimer = null;
+function _schedulePoll(ms) {
+  clearTimeout(_pollTimer);
+  _pollTimer = setTimeout(pollStatus, ms);
+}
 async function pollStatus() {
+  // Quando WS está conectado, polling de baixa frequência (fallback de status)
+  // Quando WS cai durante ataques, sobe para 1s para manter UI viva
+  if (_wsConnected) { _schedulePoll(5000); return; }
   try {
     const d = await (await fetch('/api/status')).json();
     applyStatus(d);
   } catch(_) {}
-  setTimeout(pollStatus, 3000);
+  _schedulePoll(_wsRetries > 0 ? 1000 : 3000);
 }
 
 function applyStatus(s) {
@@ -1304,7 +1345,7 @@ function applyStatus(s) {
   setText('sn-data', s.data||0);
   setText('sn-pps', s.pkt_per_sec||0);
   setText('sn-ch-cur', s.channel ? 'CH'+s.channel : '-');
-  if (s.sniffer && _curPage === 'sniffer') loadChannelChart();
+  if (s.sniffer && _curPage === 'sniffer') _debouncedChannelChart();
 
   setText('ss-aps', s.aps||0);
   setText('ss-cli', s.clients||0);
@@ -1898,6 +1939,11 @@ async function manaStart() {
   if (!lastStatus.sniffer) await apiPost('/api/sniffer/start');
   await apiPost('/api/karma/mana');
   toast('red','fa-bolt','MANA Attack ativo — respondendo com TODOS SSIDs conhecidos');
+}
+let _chartDebTimer = null;
+function _debouncedChannelChart() {
+  clearTimeout(_chartDebTimer);
+  _chartDebTimer = setTimeout(loadChannelChart, 2000);
 }
 async function loadChannelChart() {
   const data = await apiGet('/api/sniffer/channels');
