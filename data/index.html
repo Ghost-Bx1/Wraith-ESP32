@@ -212,6 +212,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 .ch-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
 .ch-bar{width:100%;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;transition:height .4s}
 .ch-lbl{font-size:.55rem;color:var(--muted)}
+
+/* ── MINI STATS ROW ───────────────────────────────────────────────────────*/
+.mini-stats{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.mini-stat{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:.68rem;display:flex;align-items:center;gap:6px}
+.mini-stat i{font-size:.6rem}
+
+/* ── STAT-BOX hover ───────────────────────────────────────────────────────*/
+.stat-box:hover{border-color:var(--accent);background:var(--bg4);transform:translateY(-1px)}
+.stat-box{transition:.2s}
+
+/* ── SCROLLBAR ────────────────────────────────────────────────────────────*/
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 </style>
 </head>
 <body>
@@ -341,18 +356,33 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
   <div class="qa-card">
     <div class="qa-title"><i class="fa-solid fa-crosshairs"></i> Quick Attack</div>
     <div class="qa-desc">Selecione um AP na tabela abaixo e clique em <b>Attack</b> para iniciar Deauth + Auto-Capture do handshake WPA2 em um clique.</div>
-    <div class="btns"><button class="btn btn-primary" onclick="wifiScan()"><i class="fa-solid fa-magnifying-glass"></i> Escanear Redes</button></div>
+    <div class="btns">
+      <button class="btn btn-primary" onclick="wifiScan()"><i class="fa-solid fa-magnifying-glass"></i> Escanear</button>
+      <button class="btn btn-ghost" id="btn-autoscan" onclick="toggleAutoScan()"><i class="fa-solid fa-rotate"></i> Auto-Scan</button>
+    </div>
   </div>
   <div class="card">
     <div class="card-header">
       <div class="card-icon"><i class="fa-solid fa-wifi"></i></div>
       <div class="card-title">Redes Detectadas</div>
-      <div style="margin-left:auto;font-size:.65rem;color:var(--muted)" id="scan-ts"></div>
+      <span class="badge badge-grn" style="font-size:.6rem" id="scan-total">0</span>
+      <span style="font-size:.65rem;color:var(--muted);margin-left:4px">WPA2: <b id="scan-wpa2">0</b></span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <input type="text" placeholder="Filtrar..." oninput="filterAPs(this.value)"
+          style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--fg);padding:3px 8px;font-size:.7rem;width:130px">
+        <span style="font-size:.65rem;color:var(--muted)" id="scan-ts"></span>
+      </div>
+    </div>
+    <div class="mini-stats" id="scan-mini-stats" style="display:none">
+      <div class="mini-stat"><i class="fa-solid fa-lock-open" style="color:var(--green)"></i> Open: <b id="ms-open">0</b></div>
+      <div class="mini-stat"><i class="fa-solid fa-lock" style="color:var(--red)"></i> WPA2/3: <b id="ms-wpa2">0</b></div>
+      <div class="mini-stat"><i class="fa-solid fa-eye-slash" style="color:var(--muted)"></i> Hidden: <b id="ms-hidden">0</b></div>
+      <div class="mini-stat"><i class="fa-solid fa-signal" style="color:var(--cyan)"></i> Forte (&gt;-60dBm): <b id="ms-strong">0</b></div>
     </div>
     <div class="tbl-wrap">
     <table class="tbl"><thead><tr>
       <th>SSID</th><th>BSSID</th><th>CH</th><th>RSSI</th><th>Dist.</th><th>Vendor</th><th>Auth</th><th>Acao</th>
-    </tr></thead><tbody id="t-aps"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">Clique em Escanear Redes</td></tr></tbody></table>
+    </tr></thead><tbody id="t-aps"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">Clique em Escanear</td></tr></tbody></table>
     </div>
   </div>
   <div class="card">
@@ -405,7 +435,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="card-header">
       <div class="card-icon green"><i class="fa-solid fa-shield-halved"></i></div>
       <div class="card-title">Estado dos Handshakes</div>
-      <button class="btn btn-ghost" style="margin-left:auto;padding:4px 10px" onclick="loadHsStates()"><i class="fa-solid fa-rotate"></i></button>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-ghost" style="padding:4px 10px" onclick="exportHsStates()"><i class="fa-solid fa-file-export"></i> Export</button>
+        <button class="btn btn-ghost" style="padding:4px 10px" onclick="loadHsStates()"><i class="fa-solid fa-rotate"></i></button>
+      </div>
     </div>
     <div class="info-box">M1+M2 = <b style="color:var(--yel)">CRACKABLE</b> (hashcat -m 22000) &nbsp;|&nbsp; M1+M2+M3+M4 = <b style="color:var(--green)">COMPLETO</b> (aircrack-ng)</div>
     <div class="tbl-wrap">
@@ -512,6 +545,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="btns">
       <button class="btn btn-danger" onclick="etStart()"><i class="fa-solid fa-play"></i> Iniciar</button>
       <button class="btn btn-ghost" onclick="apiPost('/api/eviltwin/stop')"><i class="fa-solid fa-stop"></i> Parar</button>
+      <button class="btn btn-ghost" onclick="fillETFromSel()"><i class="fa-solid fa-crosshairs"></i> AP Selecionado</button>
       <button class="btn btn-primary" onclick="loadCreds()"><i class="fa-solid fa-rotate"></i> Atualizar Creds</button>
       <a href="/api/export/creds" class="btn btn-ghost" download="creds.txt"><i class="fa-solid fa-download"></i> Export</a>
     </div>
@@ -558,9 +592,13 @@ Oi_Fibra</textarea>
         <div class="info-box" style="font-size:.68rem;margin:0">Beacons a cada 50ms. Enche a lista WiFi de dispositivos proximos.</div>
       </div>
     </div>
+    <div id="bc-status" class="atk-bar" style="display:none;margin-bottom:10px">
+      <i class="fa-solid fa-tower-broadcast"></i>
+      <span>Beacon Flood ativo — <b id="bc-ssid-cnt">0</b> SSIDs transmitindo</span>
+    </div>
     <div class="btns">
       <button class="btn btn-warn" onclick="beaconStart()"><i class="fa-solid fa-play"></i> Iniciar Flood</button>
-      <button class="btn btn-ghost" onclick="apiPost('/api/beacon/stop')"><i class="fa-solid fa-stop"></i> Parar</button>
+      <button class="btn btn-ghost" onclick="beaconStop()"><i class="fa-solid fa-stop"></i> Parar</button>
     </div>
   </div>
 </div>
@@ -1161,38 +1199,83 @@ function toast(type, icon, msg) {
 
 // ── WIFI SCAN ─────────────────────────────────────────────────────────────────
 let _apList = [];
-async function wifiScan() {
+let _autoScanTimer = null;
+let _scanFilter = '';
+
+function toggleAutoScan() {
+  const btn = document.getElementById('btn-autoscan');
+  if (_autoScanTimer) {
+    clearInterval(_autoScanTimer);
+    _autoScanTimer = null;
+    btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Auto-Scan';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-ghost');
+  } else {
+    wifiScan();
+    _autoScanTimer = setInterval(wifiScan, 15000);
+    btn.innerHTML = '<i class="fa-solid fa-stop"></i> Parar Auto';
+    btn.classList.remove('btn-ghost');
+    btn.classList.add('btn-danger');
+  }
+}
+
+function filterAPs(val) {
+  _scanFilter = val.toLowerCase();
+  renderAPTable(_apList);
+}
+
+function renderAPTable(data) {
   const tbody = document.getElementById('t-aps');
-  tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:18px"><i class="fa-solid fa-spinner fa-spin"></i> Escaneando...</td></tr>';
-  const data = await apiGet('/api/wifi/scan');
-  _apList = data;
   tbody.innerHTML = '';
-  data.sort((a,b) => b.rssi - a.rssi);
-  const chCount = {};
-  data.forEach(ap => { chCount[ap.channel] = (chCount[ap.channel]||0)+1; });
-  buildChMap(chCount);
-  data.forEach(ap => {
+  const filtered = _scanFilter
+    ? data.filter(ap => (ap.ssid||'').toLowerCase().includes(_scanFilter)
+        || ap.bssid.toLowerCase().includes(_scanFilter)
+        || ouiLookup(ap.bssid).toLowerCase().includes(_scanFilter))
+    : data;
+  const wpa2Count = filtered.filter(ap => ap.auth >= 3).length;
+  setText('scan-wpa2', wpa2Count);
+  filtered.forEach(ap => {
     const pct = Math.max(0, Math.min(100, (ap.rssi + 100) * 2));
     const authNames = ['Open','WEP','WPA','WPA2','WPA/WPA2','WPA3'];
     const auth = authNames[ap.auth] || '?';
-    const authBadge = ap.auth===0 ? 'badge-grn' : 'badge-red';
+    const authBadge = ap.auth===0 ? 'badge-grn' : ap.auth>=3 ? 'badge-red' : 'badge-yel';
     const dist = rssiToDistance(ap.rssi);
     const vendor = ouiLookup(ap.bssid);
+    const rssiColor = ap.rssi > -60 ? 'var(--green)' : ap.rssi > -75 ? 'var(--yel)' : 'var(--red)';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><b>${esc(ap.ssid)||'<hidden>'}</b></td>
-      <td class="mono">${ap.bssid}</td>
-      <td>${ap.channel}</td>
-      <td><div class="rssi-pill"><div class="rssi-bar" style="width:${pct/3}px"></div>${ap.rssi}dBm</div></td>
+      <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b></td>
+      <td class="mono" style="font-size:.7rem">${ap.bssid}</td>
+      <td style="text-align:center">${ap.channel}</td>
+      <td><div class="rssi-pill"><div class="rssi-bar" style="width:${pct/3}px;background:${rssiColor}"></div><span style="color:${rssiColor}">${ap.rssi}dBm</span></div></td>
       <td style="font-size:.7rem;color:var(--cyan)">${dist}</td>
       <td style="font-size:.65rem;color:var(--muted)">${vendor}</td>
       <td><span class="badge ${authBadge}">${auth}</span></td>
       <td style="white-space:nowrap">
-        <button class="btn btn-ghost" style="padding:3px 8px;font-size:.65rem" onclick="selectAP('${esc(ap.ssid)}','${ap.bssid}',${ap.channel})"><i class="fa-solid fa-crosshairs"></i></button>
-        <button class="btn btn-danger" style="padding:3px 8px;font-size:.65rem" onclick="quickAttack('${ap.bssid}',${ap.channel})"><i class="fa-solid fa-bolt"></i> Attack</button>
+        <button class="btn btn-ghost" style="padding:3px 8px;font-size:.65rem" title="Selecionar alvo" onclick="selectAP('${esc(ap.ssid)}','${ap.bssid}',${ap.channel})"><i class="fa-solid fa-crosshairs"></i></button>
+        <button class="btn btn-danger" style="padding:3px 8px;font-size:.65rem" title="Deauth + captura" onclick="quickAttack('${ap.bssid}',${ap.channel})"><i class="fa-solid fa-bolt"></i></button>
       </td>`;
     tbody.appendChild(tr);
   });
+}
+
+async function wifiScan() {
+  const tbody = document.getElementById('t-aps');
+  tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:18px"><i class="fa-solid fa-spinner fa-spin"></i> Escaneando...</td></tr>';
+  const data = await apiGet('/api/wifi/scan');
+  _apList = data;
+  data.sort((a,b) => b.rssi - a.rssi);
+  const chCount = {};
+  data.forEach(ap => { chCount[ap.channel] = (chCount[ap.channel]||0)+1; });
+  buildChMap(chCount);
+  setText('scan-total', data.length);
+  // Mini stats
+  document.getElementById('scan-mini-stats').style.display = data.length ? 'flex' : 'none';
+  setText('ms-open', data.filter(a => a.auth===0).length);
+  setText('ms-wpa2', data.filter(a => a.auth>=3).length);
+  setText('ms-hidden', data.filter(a => !a.ssid || a.ssid.length===0).length);
+  setText('ms-strong', data.filter(a => a.rssi > -60).length);
+  renderAPTable(data);
   setText('scan-ts', new Date().toLocaleTimeString('pt-BR'));
   const clients = await apiGet('/api/wifi/clients');
   const ct = document.getElementById('t-clients');
@@ -1215,11 +1298,14 @@ function buildChMap(counts) {
   }
 }
 
+let _selAP = null;
 function selectAP(ssid, bssid, channel) {
+  _selAP = { ssid, bssid, channel };
   document.getElementById('d-bssid').value = bssid;
   document.getElementById('d-ch').value = channel;
   document.getElementById('et-ssid').value = ssid;
   document.getElementById('et-ch').value = channel;
+  toast('grn','fa-crosshairs','Alvo: ' + (ssid||bssid) + ' ch' + channel);
 }
 function quickAttack(bssid, channel) {
   document.getElementById('d-bssid').value = bssid;
@@ -1232,8 +1318,16 @@ function quickAttack(bssid, channel) {
   if (el) nav(el, 'deauth');
 }
 function fillFromSel() {
-  const bssid = document.getElementById('d-bssid').value;
-  if (!bssid) { toast('yel','fa-triangle-exclamation','Execute o Scanner primeiro e clique em Select'); }
+  if (!_selAP) { toast('yel','fa-crosshairs','Nenhum AP selecionado — use o Scanner'); return; }
+  document.getElementById('d-bssid').value = _selAP.bssid;
+  document.getElementById('d-ch').value = _selAP.channel;
+  toast('grn','fa-crosshairs','AP carregado: ' + (_selAP.ssid||_selAP.bssid));
+}
+function fillETFromSel() {
+  if (!_selAP) { toast('yel','fa-crosshairs','Nenhum AP selecionado — use o Scanner'); return; }
+  document.getElementById('et-ssid').value = _selAP.ssid || '';
+  document.getElementById('et-ch').value = _selAP.channel;
+  toast('grn','fa-crosshairs','AP carregado: ' + (_selAP.ssid||_selAP.bssid));
 }
 
 // ── TARGET MANAGER ────────────────────────────────────────────────────────────
@@ -1321,6 +1415,30 @@ async function loadHsStates() {
     }
   });
 }
+async function exportHsStates() {
+  const states = await apiGet('/api/sniffer/states');
+  if (!states || states.length === 0) { toast('yel','fa-triangle-exclamation','Nenhum handshake para exportar'); return; }
+  let txt = '# Ghost Predator — Handshake States Export\n';
+  txt += '# ' + new Date().toLocaleString('pt-BR') + '\n';
+  txt += '# BSSID | Client | M1 M2 M3 M4 | Status\n\n';
+  states.forEach(s => {
+    const msgs = [s.m1?'M1':'--', s.m2?'M2':'--', s.m3?'M3':'--', s.m4?'M4':'--'].join(' ');
+    const status = s.complete ? 'COMPLETE' : s.crackable ? 'CRACKABLE' : 'PARTIAL';
+    txt += `${s.bssid} | ${s.client} | ${msgs} | ${status}\n`;
+  });
+  const crackable = states.filter(s => s.crackable);
+  if (crackable.length) {
+    txt += '\n# Crackable (hashcat -m 22000 pmkids.txt wordlist.txt)\n';
+    crackable.forEach(s => txt += `# ${s.bssid} → ${s.client}\n`);
+  }
+  const blob = new Blob([txt], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'handshake_states.txt';
+  a.click();
+  toast('grn','fa-download','Exportado handshake_states.txt');
+}
+
 async function loadSnifferData() {
   const hs = await apiGet('/api/sniffer/handshakes');
   const tbs = document.getElementById('t-hs');
@@ -1383,10 +1501,20 @@ async function loadCreds() {
 // ── BEACON ────────────────────────────────────────────────────────────────────
 function beaconStart() {
   const ssids = document.getElementById('bc-ssids').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if (!ssids.length) { toast('yel','fa-triangle-exclamation','Adicione pelo menos 1 SSID'); return; }
   const ch = parseInt(document.getElementById('bc-ch').value)||6;
   const wpa2 = document.getElementById('bc-wpa2').checked;
   apiPost('/api/beacon/start', { ssids, channel: ch, wpa2 });
-  toast('yel','fa-tower-broadcast','Beacon Flood: ' + ssids.length + ' SSIDs');
+  setText('bc-ssid-cnt', ssids.length);
+  document.getElementById('bc-status').style.display = 'flex';
+  setBadge('ab-beacon', true);
+  toast('yel','fa-tower-broadcast','Beacon Flood: ' + ssids.length + ' SSIDs no ar');
+}
+function beaconStop() {
+  apiPost('/api/beacon/stop');
+  document.getElementById('bc-status').style.display = 'none';
+  setBadge('ab-beacon', false);
+  toast('grn','fa-stop','Beacon Flood parado');
 }
 
 // ── KARMA ─────────────────────────────────────────────────────────────────────
@@ -1587,7 +1715,14 @@ async function loadLogs() {
 }
 
 // ── NUCLEAR ───────────────────────────────────────────────────────────────────
+let _nucTimer = null;
+
 async function nuclearStart() {
+  // Auto-scan se não há alvos
+  if (!_apList || _apList.length === 0) {
+    toast('yel','fa-spinner','Sem alvos — executando scan automático...');
+    await wifiScan();
+  }
   const r = await (await apiPost('/api/nuclear/start')).json();
   if (r.ok) {
     setText('nuc-targets', r.targets||0);
@@ -1595,10 +1730,26 @@ async function nuclearStart() {
     setText('nuclear-msg', 'Nuclear ativo — ' + (r.targets||0) + ' alvos WPA2 em ataque');
     setBadge('ab-nuclear', true);
     toast('red','fa-biohazard','Nuclear iniciado! ' + (r.targets||0) + ' alvos WPA2');
-  } else toast('yel','fa-triangle-exclamation','Nuclear falhou — execute o Scanner primeiro');
+    _nucTimer = setInterval(_nucLiveUpdate, 2000);
+  } else toast('yel','fa-triangle-exclamation','Nuclear falhou — nenhuma rede WPA2 encontrada');
 }
+
+async function _nucLiveUpdate() {
+  try {
+    const [hs, pm, states] = await Promise.all([
+      apiGet('/api/sniffer/handshakes'),
+      apiGet('/api/sniffer/pmkids'),
+      apiGet('/api/sniffer/states')
+    ]);
+    setText('nuc-hs', hs ? hs.length : 0);
+    setText('nuc-pm', pm ? pm.length : 0);
+    if (states) setText('nuc-creds', states.filter(s => s.crackable).length);
+  } catch(e) {}
+}
+
 async function nuclearStop() {
   await apiPost('/api/nuclear/stop');
+  clearInterval(_nucTimer); _nucTimer = null;
   document.getElementById('nuclear-status').style.display = 'none';
   setBadge('ab-nuclear', false);
   toast('grn','fa-stop','Nuclear parado');
