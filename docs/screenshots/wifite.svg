@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="480" viewBox="0 0 900 480">
+  <defs>
+    <style>* { font-family: 'Segoe UI', monospace; }</style>
+  </defs>
+  <rect width="900" height="480" fill="#0f0f1a"/>
+  <rect width="900" height="44" fill="#13131f"/>
+  <rect x="0" y="44" width="900" height="1" fill="#2d2d44"/>
+  <circle cx="22" cy="22" r="12" fill="#7c3aed" opacity="0.9"/>
+  <text x="22" y="26" text-anchor="middle" font-size="12" fill="white" font-weight="bold">G</text>
+  <text x="42" y="27" font-size="13" font-weight="700" fill="#e2e8f0">Ghost Predator</text>
+  <text x="152" y="27" font-size="10" fill="#7c3aed">Mobile v3.5</text>
+  <text x="650" y="27" font-size="11" font-weight="700" fill="#d97706">🤖 Auto-Attack (Wifite Mode)</text>
+
+  <!-- Sidebar -->
+  <rect x="0" y="45" width="180" height="435" fill="#111120"/>
+  <rect x="180" y="45" width="1" height="435" fill="#2d2d44"/>
+  <text x="20" y="73" font-size="11" fill="#64748b">⬡ Dashboard</text>
+  <rect x="0" y="84" width="180" height="34" fill="#7c3aed12"/>
+  <rect x="0" y="84" width="2" height="34" fill="#7c3aed"/>
+  <text x="20" y="106" font-size="11" fill="#7c3aed" font-weight="600">🤖 Auto-Attack</text>
+  <text x="20" y="136" font-size="11" fill="#64748b">⚡ Deauther</text>
+  <text x="20" y="166" font-size="11" fill="#64748b">👁 Sniffer</text>
+  <text x="20" y="196" font-size="11" fill="#64748b">👻 Evil Twin</text>
+  <text x="20" y="226" font-size="11" fill="#64748b">⚡ PMKID Fisher</text>
+
+  <!-- Config card -->
+  <rect x="196" y="58" width="340" height="130" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <rect x="196" y="58" width="340" height="36" rx="6" fill="#13131f"/>
+  <rect x="196" y="80" width="340" height="14" fill="#13131f"/>
+  <text x="216" y="80" font-size="11" font-weight="600" fill="#e2e8f0">⚙ Configuração</text>
+  <text x="214" y="114" font-size="9" fill="#94a3b8">RSSI mínimo (dBm)</text>
+  <rect x="310" y="100" width="60" height="22" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="340" y="115" text-anchor="middle" font-size="11" fill="#e2e8f0">-70</text>
+  <text x="214" y="144" font-size="9" fill="#94a3b8">Timeout PMKID (s)</text>
+  <rect x="310" y="130" width="60" height="22" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="340" y="145" text-anchor="middle" font-size="11" fill="#e2e8f0">30</text>
+  <text x="214" y="174" font-size="9" fill="#94a3b8">Timeout Deauth (s)</text>
+  <rect x="310" y="160" width="60" height="22" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="340" y="175" text-anchor="middle" font-size="11" fill="#e2e8f0">60</text>
+
+  <!-- Buttons -->
+  <rect x="196" y="196" width="340" height="50" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <rect x="208" y="207" width="100" height="28" rx="4" fill="#059669"/>
+  <text x="258" y="225" text-anchor="middle" font-size="10" fill="white" font-weight="700">▶ Iniciar</text>
+  <rect x="316" y="207" width="100" height="28" rx="4" fill="#1e293b" stroke="#dc2626" stroke-width="1"/>
+  <text x="366" y="225" text-anchor="middle" font-size="10" fill="#dc2626" font-weight="700">■ Parar</text>
+  <rect x="424" y="207" width="100" height="28" rx="4" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="474" y="225" text-anchor="middle" font-size="10" fill="#94a3b8">↻ Status</text>
+
+  <!-- Progress -->
+  <rect x="548" y="58" width="336" height="80" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <rect x="548" y="58" width="336" height="36" rx="6" fill="#13131f"/>
+  <rect x="548" y="80" width="336" height="14" fill="#13131f"/>
+  <text x="566" y="80" font-size="11" font-weight="600" fill="#e2e8f0">◉ Progresso</text>
+  <text x="566" y="116" font-size="10" fill="#94a3b8">Alvo 2 de 5 — PMKID Phase</text>
+  <rect x="566" y="122" width="300" height="6" rx="3" fill="#2d2d44"/>
+  <rect x="566" y="122" width="120" height="6" rx="3" fill="#7c3aed"/>
+  <text x="716" y="131" text-anchor="end" font-size="9" fill="#7c3aed">40%</text>
+
+  <!-- Phase indicators -->
+  <rect x="548" y="146" width="336" height="42" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <rect x="560" y="156" width="70" height="22" rx="3" fill="#22c55e14" stroke="#059669" stroke-width="1"/>
+  <text x="595" y="171" text-anchor="middle" font-size="9" fill="#22c55e" font-weight="600">✓ PMKID</text>
+  <rect x="638" y="156" width="70" height="22" rx="3" fill="#7c3aed14" stroke="#7c3aed" stroke-width="1"/>
+  <text x="673" y="171" text-anchor="middle" font-size="9" fill="#7c3aed" font-weight="600">► DEAUTH</text>
+  <rect x="716" y="156" width="70" height="22" rx="3" fill="#2d2d44"/>
+  <text x="751" y="171" text-anchor="middle" font-size="9" fill="#64748b">Evil Twin</text>
+  <rect x="794" y="156" width="78" height="22" rx="3" fill="#2d2d44"/>
+  <text x="833" y="171" text-anchor="middle" font-size="9" fill="#64748b">Done</text>
+
+  <!-- Target table -->
+  <rect x="196" y="256" width="688" height="196" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <rect x="196" y="256" width="688" height="36" rx="6" fill="#13131f"/>
+  <rect x="196" y="278" width="688" height="14" fill="#13131f"/>
+  <text x="216" y="278" font-size="11" font-weight="600" fill="#e2e8f0">◎ Alvos WPA2</text>
+  <!-- Table header -->
+  <rect x="196" y="292" width="688" height="22" fill="#0f0f1a"/>
+  <text x="210" y="307" font-size="9" fill="#64748b" font-weight="600">SSID</text>
+  <text x="370" y="307" font-size="9" fill="#64748b" font-weight="600">BSSID</text>
+  <text x="520" y="307" font-size="9" fill="#64748b" font-weight="600">RSSI</text>
+  <text x="570" y="307" font-size="9" fill="#64748b" font-weight="600">CH</text>
+  <text x="610" y="307" font-size="9" fill="#64748b" font-weight="600">PMKID</text>
+  <text x="660" y="307" font-size="9" fill="#64748b" font-weight="600">HS</text>
+  <text x="700" y="307" font-size="9" fill="#64748b" font-weight="600">CREDS</text>
+  <text x="750" y="307" font-size="9" fill="#64748b" font-weight="600">STATUS</text>
+  <!-- Row 1 - completed -->
+  <rect x="196" y="314" width="688" height="26" fill="#22c55e08"/>
+  <text x="210" y="331" font-size="10" fill="#e2e8f0">HomeNetwork_5G</text>
+  <text x="370" y="331" font-size="9" fill="#94a3b8">AA:BB:CC:11:22:33</text>
+  <text x="520" y="331" font-size="9" fill="#22c55e">-58</text>
+  <text x="570" y="331" font-size="9" fill="#94a3b8">6</text>
+  <rect x="608" y="319" width="28" height="14" rx="3" fill="#22c55e20" stroke="#059669" stroke-width="1"/>
+  <text x="622" y="330" text-anchor="middle" font-size="8" fill="#22c55e">OK</text>
+  <text x="660" y="331" font-size="9" fill="#475569">-</text>
+  <text x="700" y="331" font-size="9" fill="#475569">-</text>
+  <text x="750" y="331" font-size="9" fill="#22c55e" font-weight="600">✓ PMKID</text>
+  <!-- Row 2 - active -->
+  <rect x="196" y="340" width="688" height="26" fill="#7c3aed10"/>
+  <rect x="196" y="340" width="3" height="26" fill="#7c3aed"/>
+  <text x="210" y="357" font-size="10" fill="#a78bfa" font-weight="600">VIVO_Guest</text>
+  <text x="370" y="357" font-size="9" fill="#94a3b8">DD:EE:FF:44:55:66</text>
+  <text x="520" y="357" font-size="9" fill="#d97706">-67</text>
+  <text x="570" y="357" font-size="9" fill="#94a3b8">11</text>
+  <text x="610" y="357" font-size="9" fill="#475569">-</text>
+  <text x="660" y="357" font-size="9" fill="#475569">-</text>
+  <text x="700" y="357" font-size="9" fill="#475569">-</text>
+  <text x="750" y="357" font-size="9" fill="#7c3aed" font-weight="600">► DEAUTH...</text>
+  <!-- Row 3 -->
+  <rect x="196" y="366" width="688" height="26" fill="transparent"/>
+  <text x="210" y="383" font-size="10" fill="#64748b">Claro_2G</text>
+  <text x="370" y="383" font-size="9" fill="#64748b">11:22:33:AA:BB:CC</text>
+  <text x="520" y="383" font-size="9" fill="#94a3b8">-74</text>
+  <text x="570" y="383" font-size="9" fill="#94a3b8">1</text>
+  <text x="610" y="383" font-size="9" fill="#475569">-</text>
+  <text x="660" y="383" font-size="9" fill="#475569">-</text>
+  <text x="700" y="383" font-size="9" fill="#475569">-</text>
+  <text x="750" y="383" font-size="9" fill="#475569">pendente</text>
+  <!-- Row 4 -->
+  <rect x="196" y="392" width="688" height="26" fill="transparent"/>
+  <text x="210" y="409" font-size="10" fill="#64748b">TIM_Fibra</text>
+  <text x="370" y="409" font-size="9" fill="#64748b">55:66:77:88:99:AA</text>
+  <text x="520" y="409" font-size="9" fill="#94a3b8">-79</text>
+  <text x="570" y="409" font-size="9" fill="#94a3b8">6</text>
+  <text x="610" y="409" font-size="9" fill="#475569">-</text>
+  <text x="660" y="409" font-size="9" fill="#475569">-</text>
+  <text x="700" y="409" font-size="9" fill="#475569">-</text>
+  <text x="750" y="409" font-size="9" fill="#475569">pendente</text>
+  <!-- Row 5 - WPS -->
+  <rect x="196" y="418" width="688" height="26" fill="transparent"/>
+  <text x="210" y="435" font-size="10" fill="#64748b">NET_VIRTUA</text>
+  <rect x="344" y="421" width="20" height="12" rx="2" fill="#d9780620" stroke="#d97706" stroke-width="1"/>
+  <text x="354" y="430" text-anchor="middle" font-size="7" fill="#d97706">WPS</text>
+  <text x="370" y="435" font-size="9" fill="#64748b">CC:DD:EE:FF:00:11</text>
+  <text x="520" y="435" font-size="9" fill="#dc2626">-81</text>
+  <text x="570" y="435" font-size="9" fill="#94a3b8">13</text>
+  <text x="610" y="435" font-size="9" fill="#475569">-</text>
+  <text x="660" y="435" font-size="9" fill="#475569">-</text>
+  <text x="700" y="435" font-size="9" fill="#475569">-</text>
+  <text x="750" y="435" font-size="9" fill="#d97706">⚠ WPS PIN</text>
+
+  <!-- Footer -->
+  <text x="450" y="470" text-anchor="middle" font-size="9" fill="#475569">Auto-Attack: PMKID(30s) → Deauth+HS(60s) → Evil Twin(120s) por alvo | prioridade: WPS PIN > RSSI</text>
+</svg>

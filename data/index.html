@@ -472,13 +472,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="card-header">
       <div class="card-icon red"><i class="fa-solid fa-database"></i></div>
       <div class="card-title">PMKIDs Capturados</div>
-      <a href="/api/export/pmkids" class="btn btn-ghost" style="margin-left:auto;padding:4px 10px" download="pmkids.txt"><i class="fa-solid fa-download"></i> Export Hashcat</a>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <a href="/api/export/pmkids" class="btn btn-ghost" style="padding:4px 10px" download="pmkids.txt"><i class="fa-solid fa-download"></i> Export Hashcat</a>
+        <a href="/api/export/pcap" class="btn btn-ghost" style="padding:4px 10px" download="capture.pcap"><i class="fa-solid fa-file-arrow-down"></i> PCAP</a>
+      </div>
     </div>
     <div class="info-box">Format hashcat <code>-m 22000</code>: <b>hashcat -m 22000 pmkids.txt wordlist.txt</b></div>
     <div class="tbl-wrap">
     <table class="tbl"><thead><tr><th>AP</th><th>Cliente</th><th>PMKID</th><th>Tempo</th></tr></thead>
     <tbody id="t-pmkids"></tbody></table>
     </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon cyan"><i class="fa-solid fa-chart-bar"></i></div>
+      <div class="card-title">Atividade por Canal (1-13)</div>
+      <button class="btn btn-ghost" style="margin-left:auto;padding:4px 10px" onclick="loadChannelChart()"><i class="fa-solid fa-rotate"></i></button>
+    </div>
+    <div id="channel-chart" style="display:flex;align-items:flex-end;gap:4px;height:80px;padding:8px 0"></div>
+    <div style="display:flex;gap:4px;margin-top:4px" id="channel-chart-labels"></div>
   </div>
 </div>
 
@@ -638,7 +650,8 @@ Oi_Fibra</textarea>
     </div>
     <div class="info-box">Responde automaticamente a qualquer Probe Request com um AP falso do mesmo SSID. Forca dispositivos a conectar no nosso AP. Requer Sniffer ativo.</div>
     <div class="btns">
-      <button class="btn btn-warn" onclick="karmaStart()"><i class="fa-solid fa-radiation"></i> Ativar Karma</button>
+      <button class="btn btn-warn" onclick="karmaStart()"><i class="fa-solid fa-radiation"></i> Karma</button>
+      <button class="btn btn-danger" onclick="manaStart()" title="MANA: responde com TODOS SSIDs conhecidos"><i class="fa-solid fa-bolt"></i> MANA</button>
       <button class="btn btn-ghost" onclick="apiPost('/api/karma/stop')"><i class="fa-solid fa-stop"></i> Parar</button>
       <button class="btn btn-ghost" onclick="loadKarma()"><i class="fa-solid fa-rotate"></i> Atualizar</button>
     </div>
@@ -1199,12 +1212,14 @@ function nav(el, id) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   el.classList.add('active');
+  _curPage = id;
   if (id === 'probes') loadProbes();
   if (id === 'hidden') loadHiddenResults();
 }
 
 // ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 let ws;
+let _curPage = 'dashboard';
 let _prevPmkids = 0, _prevCreds = 0;
 let _wsRetries = 0;
 function wsConnect() {
@@ -1289,6 +1304,7 @@ function applyStatus(s) {
   setText('sn-data', s.data||0);
   setText('sn-pps', s.pkt_per_sec||0);
   setText('sn-ch-cur', s.channel ? 'CH'+s.channel : '-');
+  if (s.sniffer && _curPage === 'sniffer') loadChannelChart();
 
   setText('ss-aps', s.aps||0);
   setText('ss-cli', s.clients||0);
@@ -1877,6 +1893,43 @@ async function karmaStart() {
   if (!lastStatus.sniffer) await apiPost('/api/sniffer/start');
   await apiPost('/api/karma/start');
   toast('yel','fa-radiation','Karma Attack ativo');
+}
+async function manaStart() {
+  if (!lastStatus.sniffer) await apiPost('/api/sniffer/start');
+  await apiPost('/api/karma/mana');
+  toast('red','fa-bolt','MANA Attack ativo — respondendo com TODOS SSIDs conhecidos');
+}
+async function loadChannelChart() {
+  const data = await apiGet('/api/sniffer/channels');
+  if (!data || !Array.isArray(data)) return;
+  const maxPkts = Math.max(1, ...data.map(d => d.pkts));
+  const chart = document.getElementById('channel-chart');
+  const labels = document.getElementById('channel-chart-labels');
+  if (!chart) return;
+  chart.innerHTML = '';
+  if (labels) labels.innerHTML = '';
+  const colors = ['#00d4ff','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#65a30d',
+                  '#c2410c','#9333ea','#0d9488','#b45309','#1d4ed8','#be185d'];
+  data.forEach((d, i) => {
+    const pct = Math.max(4, Math.round((d.pkts / maxPkts) * 100));
+    const bar = document.createElement('div');
+    bar.style.cssText = 'flex:1;background:' + colors[i % colors.length] +
+      ';height:' + pct + '%;border-radius:3px 3px 0 0;position:relative;cursor:default';
+    bar.title = 'CH' + d.ch + ': ' + d.pkts + ' pkts';
+    if (d.pkts > 0) {
+      const lbl = document.createElement('div');
+      lbl.textContent = d.pkts > 999 ? (d.pkts/1000).toFixed(1)+'k' : d.pkts;
+      lbl.style.cssText = 'position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:#fff;white-space:nowrap';
+      bar.appendChild(lbl);
+    }
+    chart.appendChild(bar);
+    if (labels) {
+      const l = document.createElement('div');
+      l.textContent = d.ch;
+      l.style.cssText = 'flex:1;text-align:center;font-size:9px;color:#999';
+      labels.appendChild(l);
+    }
+  });
 }
 async function loadKarma() {
   const data = await apiGet('/api/karma/responded');

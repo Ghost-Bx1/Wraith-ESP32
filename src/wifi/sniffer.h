@@ -92,6 +92,7 @@ public:
 
     bool  eapolActive = false;   // pausa o hop enquanto EAPOL está em andamento
     uint32_t pktPerSec = 0;      // pacotes por segundo (atualizado a cada tick)
+    uint32_t channelStats[14] = {}; // pacotes por canal 1-13 (índice 1..13)
 
     void tick() {
         if (!running) return;
@@ -148,6 +149,7 @@ private:
         uint8_t fst  = (hdr->fc & 0x00F0) >> 4;
         int8_t  rssi = pkt->rx_ctrl.rssi;
         uint8_t ch   = pkt->rx_ctrl.channel;
+        if (ch >= 1 && ch <= 13) self.channelStats[ch]++;
 
         if (ft == 0x00) {
             self.mgmtCount++;

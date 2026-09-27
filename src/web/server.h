@@ -360,7 +360,12 @@ private:
         // ── Karma ─────────────────────────────────────────────────────────────
         server.on("/api/karma/start", HTTP_POST, [](AsyncWebServerRequest* req) {
             if (!Sniffer::get().running) Sniffer::get().start();
-            KarmaAttack::get().start();
+            KarmaAttack::get().start(false);
+            req->send(200, "application/json", "{\"ok\":true}");
+        });
+        server.on("/api/karma/mana", HTTP_POST, [](AsyncWebServerRequest* req) {
+            if (!Sniffer::get().running) Sniffer::get().start();
+            KarmaAttack::get().start(true);  // MANA: responde com todos SSIDs conhecidos
             req->send(200, "application/json", "{\"ok\":true}");
         });
         server.on("/api/karma/stop", HTTP_POST, [](AsyncWebServerRequest* req) {
@@ -749,6 +754,49 @@ private:
             for (auto& c : EvilTwin::get().captured)
                 out += "SSID:" + c.ssid + " | PASS:" + c.password + " | IP:" + c.ip + "\n";
             req->send(200, "text/plain", out.isEmpty() ? "# Nenhuma credencial\n" : out);
+        });
+
+        // ── PCAP Export (DLT_IEEE802_11 = 105) ───────────────────────────────
+        server.on("/api/export/pcap", HTTP_GET, [](AsyncWebServerRequest* req) {
+            // Monta arquivo PCAP com os frames EAPOL/handshake capturados
+            // Global header: magic, ver_maj, ver_min, thiszone, sigfigs, snaplen, dlt
+            static const uint8_t hdr[] = {
+                0xD4,0xC3,0xB2,0xA1, // magic (little-endian)
+                0x02,0x00,0x04,0x00, // ver 2.4
+                0x00,0x00,0x00,0x00, // thiszone
+                0x00,0x00,0x00,0x00, // sigfigs
+                0xFF,0xFF,0x00,0x00, // snaplen 65535
+                0x69,0x00,0x00,0x00  // DLT_IEEE802_11 = 105
+            };
+            String pcap((const char*)hdr, 24);
+            // Um record por frame EAPOL capturado
+            for (auto& h : Sniffer::get().handshakes) {
+                uint32_t ts_sec  = h.ts / 1000;
+                uint32_t ts_usec = (h.ts % 1000) * 1000;
+                uint32_t incl    = (uint32_t)h.len;
+                uint32_t orig    = incl;
+                // Record header (16 bytes)
+                pcap += String((char*)&ts_sec,  4);
+                pcap += String((char*)&ts_usec, 4);
+                pcap += String((char*)&incl,    4);
+                pcap += String((char*)&orig,    4);
+                pcap += String((const char*)h.data, h.len);
+            }
+            AsyncWebServerResponse* resp = req->beginResponse(200, "application/octet-stream", pcap);
+            resp->addHeader("Content-Disposition", "attachment; filename=\"capture.pcap\"");
+            req->send(resp);
+        });
+
+        // ── Channel Stats ─────────────────────────────────────────────────────
+        server.on("/api/sniffer/channels", HTTP_GET, [](AsyncWebServerRequest* req) {
+            JsonDocument doc; JsonArray arr = doc.to<JsonArray>();
+            for (int ch = 1; ch <= 13; ch++) {
+                JsonObject o = arr.add<JsonObject>();
+                o["ch"]   = ch;
+                o["pkts"] = Sniffer::get().channelStats[ch];
+            }
+            String out; serializeJson(doc, out);
+            req->send(200, "application/json", out);
         });
 
         // ── Logs ──────────────────────────────────────────────────────────────

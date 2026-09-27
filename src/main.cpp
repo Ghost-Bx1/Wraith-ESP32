@@ -97,7 +97,7 @@ void setup() {
     NimBLEDevice::init("GhostPredator");
 
     // FreeRTOS tasks
-    xTaskCreatePinnedToCore(attackTask, "attacks", 8192, nullptr, 1, nullptr, 0);
+    xTaskCreatePinnedToCore(attackTask, "attacks", 16384, nullptr, 1, nullptr, 0);
     xTaskCreatePinnedToCore(bleTask,    "ble_spam", 4096, nullptr, 1, nullptr, 1);
 
     digitalWrite(LED_STATUS, HIGH);
