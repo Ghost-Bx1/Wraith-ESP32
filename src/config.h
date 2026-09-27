@@ -1,12 +1,13 @@
 #pragma once
 
 // ── AP de gerência (painel web) ───────────────────────────────────────────────
-#define AP_SSID        "ESP32-Pentest"
-#define AP_PASS        "pentest123"
+#define AP_SSID        "GhostPredator"
+#define AP_PASS        "predator123"
 #define AP_CHANNEL     1
 #define AP_IP          "192.168.4.1"
 #define MDNS_HOST      "ghostpredator"  // acessível em http://ghostpredator.local
-#define WEB_PASS       "ghost2024"      // senha do painel web
+#define WEB_USER       "admin"
+#define WEB_PASS       "predator"       // senha do painel web
 
 // ── Segundo rádio WiFi (ESP8266 via UART2) ────────────────────────────────────
 #define RADIO2_SERIAL  Serial2

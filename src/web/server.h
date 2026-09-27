@@ -28,6 +28,7 @@ public:
     AsyncWebServer server{80};
     AsyncWebSocket ws{"/ws"};
     bool authenticated = false;
+    String currentPass = WEB_PASS;
 
     void begin() {
         _setupWiFiAP();
@@ -588,7 +589,7 @@ private:
         // ── Auth ──────────────────────────────────────────────────────────────
         _postJson("/api/login", [](AsyncWebServerRequest* req, JsonDocument& doc) {
             String pass = doc["password"] | "";
-            if (pass == WEB_PASS) {
+            if (pass == WebServer::get().currentPass) {
                 WebServer::get().authenticated = true;
                 LOG.info("[AUTH] Login bem-sucedido");
                 req->send(200, "application/json", "{\"ok\":true}");
@@ -604,6 +605,25 @@ private:
         server.on("/api/auth/check", HTTP_GET, [](AsyncWebServerRequest* req) {
             req->send(200,"application/json",
                 WebServer::get().authenticated ? "{\"ok\":true}" : "{\"ok\":false}");
+        });
+        _postJson("/api/change-password", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            if (!WebServer::get().authenticated) {
+                req->send(403, "application/json", "{\"ok\":false,\"error\":\"Nao autenticado\"}");
+                return;
+            }
+            String cur = doc["current"] | "";
+            String neo = doc["newpass"] | "";
+            if (cur != WebServer::get().currentPass) {
+                req->send(401, "application/json", "{\"ok\":false,\"error\":\"Senha atual incorreta\"}");
+                return;
+            }
+            if (neo.length() < 4) {
+                req->send(400, "application/json", "{\"ok\":false,\"error\":\"Senha muito curta (min 4)\"}");
+                return;
+            }
+            WebServer::get().currentPass = neo;
+            LOG.success("[AUTH] Senha alterada com sucesso");
+            req->send(200, "application/json", "{\"ok\":true}");
         });
 
         // ── Export ────────────────────────────────────────────────────────────

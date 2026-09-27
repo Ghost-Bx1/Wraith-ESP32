@@ -29,22 +29,36 @@ html,body{height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:13px;display:flex;flex-direction:column;transition:background .2s,color .2s}
 
 /* ── LOGIN ──────────────────────────────────────────────────────────────── */
-#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:0}
-.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:360px;box-shadow:var(--shadow)}
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:0;overflow:hidden}
+#login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(139,92,246,.18) 0%,transparent 65%);pointer-events:none}
+.login-card{background:var(--bg2);border:1px solid rgba(139,92,246,.35);border-radius:20px;padding:2.75rem 2.5rem 2rem;width:380px;box-shadow:0 0 60px rgba(139,92,246,.15),var(--shadow);position:relative;animation:loginIn .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes loginIn{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
 .login-logo{text-align:center;margin-bottom:2rem}
-.login-logo .ghost-icon{font-size:3rem;color:var(--accent);display:block;margin-bottom:.75rem}
-.login-logo h1{font-size:1.1rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text)}
-.login-logo p{font-size:.75rem;color:var(--muted);margin-top:.25rem;font-family:var(--font-mono)}
+.login-logo .ghost-icon{font-size:3.5rem;color:var(--accent);display:block;margin-bottom:.85rem;filter:drop-shadow(0 0 18px rgba(139,92,246,.7));animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{filter:drop-shadow(0 0 12px rgba(139,92,246,.5))}50%{filter:drop-shadow(0 0 28px rgba(139,92,246,.9))}}
+.login-logo h1{font-size:1.25rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
+.login-logo h1 span{color:var(--accent)}
+.login-logo p{font-size:.72rem;color:var(--muted);margin-top:.3rem;font-family:var(--font-mono);letter-spacing:.04em}
+.login-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(139,92,246,.4),transparent);margin:1.5rem 0}
 .login-field{margin-bottom:1.25rem}
-.login-field label{display:block;font-size:.7rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.08em}
+.login-field label{display:block;font-size:.68rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.1em}
 .login-field .inp-wrap{position:relative}
-.login-field input{width:100%;padding:.7rem 2.8rem .7rem 1rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:.85rem;transition:border .2s}
-.login-field input:focus{outline:none;border-color:var(--accent)}
+.login-field input{width:100%;padding:.75rem 2.8rem .75rem 1rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:.9rem;transition:border .2s,box-shadow .2s;box-sizing:border-box}
+.login-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(139,92,246,.15)}
 .login-field .eye-btn{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem}
-.login-btn{width:100%;padding:.75rem;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-family:var(--font-ui);font-size:.9rem;font-weight:600;cursor:pointer;transition:filter .2s;display:flex;align-items:center;justify-content:center;gap:.5rem}
-.login-btn:hover{filter:brightness(1.15)}
-.login-error{color:var(--red);font-size:.75rem;text-align:center;margin-top:.75rem;display:none}
-.login-version{font-size:.65rem;color:var(--muted);text-align:center;margin-top:1.5rem;font-family:var(--font-mono)}
+.login-btn{width:100%;padding:.8rem;background:linear-gradient(135deg,var(--accent),#6d28d9);border:none;border-radius:var(--radius);color:#fff;font-family:var(--font-ui);font-size:.9rem;font-weight:600;cursor:pointer;transition:filter .2s,transform .1s;display:flex;align-items:center;justify-content:center;gap:.5rem;letter-spacing:.03em}
+.login-btn:hover{filter:brightness(1.12)}
+.login-btn:active{transform:scale(.98)}
+.login-error{color:var(--red);font-size:.75rem;text-align:center;margin-top:.85rem;display:none;animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.login-version{font-size:.62rem;color:var(--muted);text-align:center;margin-top:1.5rem;font-family:var(--font-mono);opacity:.7}
+.login-badge{display:inline-block;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);border-radius:6px;padding:2px 8px;font-size:.6rem;color:var(--accent);margin-bottom:.75rem;letter-spacing:.08em;text-transform:uppercase}
+/* ── Modal troca de senha ─────────────────────────────────────────────────── */
+.chpass-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.chpass-modal.open{display:flex}
+.chpass-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2rem;width:340px;box-shadow:var(--shadow)}
+.inp{width:100%;padding:.65rem 1rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:.85rem;box-sizing:border-box;transition:border .2s}
+.inp:focus{outline:none;border-color:var(--accent)}
 
 /* ── APP (hidden until login) ─────────────────────────────────────────────*/
 #app{display:none;flex-direction:column;height:100%}
@@ -206,10 +220,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <i class="fa-solid fa-ghost login-logo ghost-icon"></i>
-      <h1>Ghost Predator <span style="color:var(--accent)">Mobile</span></h1>
+      <span class="login-badge">v3.3 &nbsp;·&nbsp; ESP32</span>
+      <i class="fa-solid fa-ghost ghost-icon"></i>
+      <h1>Ghost <span>Predator</span> Mobile</h1>
       <p>Wireless Security Assessment Platform</p>
     </div>
+    <div class="login-divider"></div>
     <div class="login-field">
       <label><i class="fa-solid fa-lock"></i> &nbsp;Senha de Acesso</label>
       <div class="inp-wrap">
@@ -218,10 +234,35 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       </div>
     </div>
     <button class="login-btn" onclick="doLogin()">
-      <i class="fa-solid fa-right-to-bracket"></i> Entrar
+      <i class="fa-solid fa-right-to-bracket"></i> &nbsp;Entrar
     </button>
-    <div class="login-error" id="login-err"><i class="fa-solid fa-triangle-exclamation"></i> Senha incorreta</div>
-    <div class="login-version">v3.3 &nbsp;|&nbsp; ESP32 &nbsp;|&nbsp; <span id="lv-ip">ghostpredator.local</span></div>
+    <div class="login-error" id="login-err"><i class="fa-solid fa-triangle-exclamation"></i> &nbsp;Senha incorreta</div>
+    <div class="login-version"><span id="lv-ip">ghostpredator.local</span> &nbsp;·&nbsp; 192.168.4.1</div>
+  </div>
+</div>
+
+<!-- ── Modal troca de senha ──────────────────────────────────────────────── -->
+<div class="chpass-modal" id="chpass-modal">
+  <div class="chpass-box">
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1.25rem">
+      <i class="fa-solid fa-key" style="color:var(--accent)"></i>
+      <b style="font-size:.9rem">Alterar Senha</b>
+      <button class="btn btn-ghost" style="margin-left:auto;padding:3px 8px" onclick="closeChpass()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="login-field">
+      <label>Senha Atual</label>
+      <input type="password" id="cp-cur" class="inp" placeholder="Senha atual">
+    </div>
+    <div class="login-field">
+      <label>Nova Senha</label>
+      <input type="password" id="cp-new" class="inp" placeholder="Nova senha (mín. 4 chars)">
+    </div>
+    <div class="login-field">
+      <label>Confirmar Nova Senha</label>
+      <input type="password" id="cp-conf" class="inp" placeholder="Repita a nova senha">
+    </div>
+    <div id="cp-err" style="color:var(--red);font-size:.75rem;margin-bottom:.75rem;display:none"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doChangePass()"><i class="fa-solid fa-floppy-disk"></i> Salvar Nova Senha</button>
   </div>
 </div>
 
@@ -248,6 +289,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="sys-chip" id="chip-ch">CH --</div>
     <div class="sys-chip" id="chip-uptime">00:00:00</div>
     <button class="icon-btn" onclick="toggleTheme()" title="Alternar tema"><i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i></button>
+    <button class="icon-btn" onclick="openChpass()" title="Alterar senha"><i class="fa-solid fa-key"></i></button>
     <button class="icon-btn" onclick="doLogout()" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
   </div>
 </div>
@@ -921,6 +963,36 @@ async function doLogout() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pass').value = '';
+}
+function openChpass() {
+  document.getElementById('cp-cur').value = '';
+  document.getElementById('cp-new').value = '';
+  document.getElementById('cp-conf').value = '';
+  document.getElementById('cp-err').style.display = 'none';
+  document.getElementById('chpass-modal').classList.add('open');
+}
+function closeChpass() { document.getElementById('chpass-modal').classList.remove('open'); }
+async function doChangePass() {
+  const cur  = document.getElementById('cp-cur').value;
+  const neo  = document.getElementById('cp-new').value;
+  const conf = document.getElementById('cp-conf').value;
+  const err  = document.getElementById('cp-err');
+  err.style.display = 'none';
+  if (!cur || !neo) { err.textContent = 'Preencha todos os campos'; err.style.display='block'; return; }
+  if (neo !== conf) { err.textContent = 'Senhas não conferem'; err.style.display='block'; return; }
+  if (neo.length < 4) { err.textContent = 'Senha muito curta (mín. 4 caracteres)'; err.style.display='block'; return; }
+  const r = await fetch('/api/change-password', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ current: cur, newpass: neo })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    closeChpass();
+    toast('green','fa-key','Senha alterada com sucesso!');
+  } else {
+    err.textContent = d.error || 'Erro ao alterar senha';
+    err.style.display = 'block';
+  }
 }
 // Check if already auth
 (async function() {
