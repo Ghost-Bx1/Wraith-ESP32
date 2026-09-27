@@ -1,0 +1,9 @@
+.pio/
+.vscode/
+*.pyc
+__pycache__/
+node_modules/
+*.log
+*.orig
+.DS_Store
+Thumbs.db
