@@ -128,10 +128,17 @@ private:
     }
 
     static bool _extractPMKID(const uint8_t* eapol, size_t elen, uint8_t* out) {
-        if (elen < 100) return false;
-        for (size_t i = 4; i + 18 < elen; i++) {
-            if (eapol[i] == 0x4C && eapol[i+1] >= 16) {
-                memcpy(out, eapol + i + 2, 16);
+        // EAPOL-Key layout: 4B header + 95B fixed fields → Key Data Length at [97-98]
+        // Key Data starts at offset 99; PMKID KDE = DD 14 00 0F AC 04 + 16B PMKID
+        if (elen < 101) return false;
+        uint16_t kdLen = ((uint16_t)eapol[97] << 8) | eapol[98];
+        if (kdLen < 22 || elen < (size_t)(99u + kdLen)) return false;
+        const uint8_t* kd = eapol + 99;
+        for (size_t i = 0; i + 22 <= (size_t)kdLen; i++) {
+            if (kd[i]   == 0xDD && kd[i+1] == 0x14 &&
+                kd[i+2] == 0x00 && kd[i+3] == 0x0F &&
+                kd[i+4] == 0xAC && kd[i+5] == 0x04) {
+                memcpy(out, kd + i + 6, 16);
                 return true;
             }
         }
@@ -196,11 +203,16 @@ private:
                 self.eapolCount++;
                 const uint8_t* eapol = body + 8;
                 size_t elen = blen - 8;
+                // FC byte1: bit0=ToDS, bit1=FromDS
+                // Infra: addr3 = BSSID always; client = addr1 if FromDS (AP→STA), addr2 if ToDS (STA→AP)
+                bool fromDS = (hdr->fc >> 8) & 0x02;
+                const uint8_t* bssidAddr  = hdr->a3;
+                const uint8_t* clientAddr = fromDS ? hdr->a1 : hdr->a2;
                 uint8_t pmkid[16];
                 if (_extractPMKID(eapol, elen, pmkid)) {
                     PMKIDCapture cap;
-                    cap.bssid  = WiFiScanner::bssidToStr(hdr->a1);
-                    cap.client = WiFiScanner::bssidToStr(hdr->a2);
+                    cap.bssid  = WiFiScanner::bssidToStr(bssidAddr);
+                    cap.client = WiFiScanner::bssidToStr(clientAddr);
                     memcpy(cap.pmkid, pmkid, 16);
                     cap.ts = millis();
                     if (self.pmkids.size() < 50) self.pmkids.push_back(cap);
@@ -209,8 +221,8 @@ private:
                     LOG.success("[PMKID] " + cap.bssid + " -> " + String(hex));
                 }
                 HandshakeCapture hs;
-                hs.bssid  = WiFiScanner::bssidToStr(hdr->a1);
-                hs.client = WiFiScanner::bssidToStr(hdr->a2);
+                hs.bssid  = WiFiScanner::bssidToStr(bssidAddr);
+                hs.client = WiFiScanner::bssidToStr(clientAddr);
                 size_t cl = elen < 256 ? elen : 256;
                 memcpy(hs.data, eapol, cl);
                 hs.len = cl; hs.ts = millis(); hs.type = 0;

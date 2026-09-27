@@ -17,6 +17,7 @@
 #include "wifi/target_intel.h"
 #include "wifi/hidden_scanner.h"
 #include "wifi/wifite_mode.h"
+#include "wifi/led_attack.h"
 #include "bluetooth/ble_scanner.h"
 #include "bluetooth/bt_classic.h"
 #include "bluetooth/ble_spam.h"
@@ -32,6 +33,7 @@ void attackTask(void*) {
         PMKIDFisher::get().tick();
         HiddenScanner::get().tick();
         WifiteMode::get().tick();
+        LEDAttack::get().tick();
 
         // Auto-stop deauth quando handshake completo capturado
         if (Deauther::get().running && Deauther::get().autoCapture) {

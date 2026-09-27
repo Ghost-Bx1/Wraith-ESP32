@@ -325,6 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
   <div class="sb-item" data-page="hidden" onclick="nav(this,'hidden')"><i class="fa-solid fa-eye-slash"></i> Hidden Scanner <span class="sb-count" id="sc-hidden"></span></div>
   <div class="sb-section">Ataques WiFi</div>
   <div class="sb-item" data-page="wifite" onclick="nav(this,'wifite')"><i class="fa-solid fa-robot"></i> Auto-Attack (Wifite) <span class="sb-count grn" id="sc-wifite"></span></div>
+  <div class="sb-item" data-page="led" onclick="nav(this,'led')"><i class="fa-solid fa-display"></i> LED Panel Attack <span class="sb-count red" id="sc-led"></span></div>
   <div class="sb-item" data-page="nuclear" onclick="nav(this,'nuclear')"><i class="fa-solid fa-biohazard"></i> Nuclear Auto-Attack</div>
   <div class="sb-item" data-page="deauth" onclick="nav(this,'deauth')"><i class="fa-solid fa-bolt"></i> Deauth Attack</div>
   <div class="sb-item" data-page="eviltwin" onclick="nav(this,'eviltwin')"><i class="fa-solid fa-user-secret"></i> Evil Twin <span class="sb-count red" id="sc-creds"></span></div>
@@ -954,6 +955,38 @@ Oi_Fibra</textarea>
       <div class="card-title">Fila de Alvos</div>
     </div>
     <div id="wifite-targets" style="font-size:.78rem;color:var(--muted)">Execute um scan WiFi e clique em Iniciar.</div>
+  </div>
+</div>
+
+<!-- ── LED PANEL ATTACK ──────────────────────────────────────────────────── -->
+<div class="page" id="page-led">
+  <div class="qa-card" style="border-color:#f97316;background:linear-gradient(135deg,#f9731622,#ef444411)">
+    <div class="qa-title" style="color:#f97316"><i class="fa-solid fa-display"></i> LED Panel Attack</div>
+    <div class="qa-desc">Detecta e ataca controladores de telões e painéis LED publicitários (Novastar, Colorlight, Linsn, DBStar). Modos: Deauth (desconecta PC controlador), Beacon Flood (confunde software) e Disrupt (UDP direto ao controlador).</div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:#f97316"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <div class="card-title">Detecção</div>
+    </div>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px">Requer scan WiFi primeiro. Detecta redes com padrões de SSID e OUIs de fabricantes LED conhecidos.</p>
+    <div class="btns">
+      <button class="btn" style="background:#f97316" onclick="ledScan()"><i class="fa-solid fa-radar"></i> Escanear Painéis LED</button>
+      <button class="btn btn-ghost" onclick="ledStop()"><i class="fa-solid fa-stop"></i> Parar Ataque</button>
+    </div>
+    <div id="led-status" style="margin-top:10px;font-size:.8rem;color:var(--muted)">Clique em Escanear para detectar painéis LED próximos.</div>
+  </div>
+  <div class="stats-grid" style="margin-top:0">
+    <div class="stat-box"><div class="stat-num" id="led-count">0</div><div class="stat-lbl">Detectados</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#f97316" id="led-pkts">0</div><div class="stat-lbl">Pkts Enviados</div></div>
+    <div class="stat-box"><div class="stat-num" id="led-mode-lbl">IDLE</div><div class="stat-lbl">Modo</div></div>
+  </div>
+  <div class="card" id="led-nets-card" style="display:none">
+    <div class="card-header">
+      <div class="card-icon" style="background:#f97316"><i class="fa-solid fa-list"></i></div>
+      <div class="card-title">Controladores Detectados</div>
+    </div>
+    <div id="led-nets"></div>
   </div>
 </div>
 
@@ -2290,6 +2323,62 @@ function copyAllLogs() {
 // ── WIFITE MODE ───────────────────────────────────────────────────────────────
 const _WIFITE_STATE = ['IDLE','SCAN','PMKID','DEAUTH','ET','DONE'];
 let _wifiteTimer = null;
+
+// ── LED Panel Attack ─────────────────────────────────────────────────────────
+const LED_MODES = ['IDLE','DEAUTH','FLOOD','DISRUPT'];
+async function ledScan() {
+  toast('orange','fa-radar','Escaneando painéis LED...');
+  const r = await apiPost('/api/led/scan');
+  ledRender(r);
+}
+async function ledStop() {
+  await apiPost('/api/led/stop');
+  toast('grn','fa-stop','Ataque LED parado');
+  ledRefresh();
+}
+async function ledAttack(idx, mode) {
+  const ep = mode === 'deauth' ? '/api/led/deauth' : mode === 'flood' ? '/api/led/flood' : '/api/led/disrupt';
+  toast('orange','fa-bolt','Atacando painel LED #'+idx+' ('+mode+')...');
+  await apiPost(ep, { idx });
+  ledRefresh();
+}
+async function ledRefresh() {
+  const r = await apiFetch('/api/led/status');
+  if (r) ledRender(r);
+}
+function ledRender(d) {
+  if (!d) return;
+  document.getElementById('led-count').textContent = d.nets ? d.nets.length : 0;
+  document.getElementById('led-pkts').textContent  = d.pkts || 0;
+  document.getElementById('led-mode-lbl').textContent = LED_MODES[d.mode] || 'IDLE';
+  document.getElementById('sc-led').textContent = d.nets && d.nets.length ? d.nets.length : '';
+  const card = document.getElementById('led-nets-card');
+  const cont = document.getElementById('led-nets');
+  if (!d.nets || d.nets.length === 0) {
+    document.getElementById('led-status').textContent = 'Nenhum painel LED detectado. Faça um scan WiFi e clique em Escanear.';
+    card.style.display = 'none'; return;
+  }
+  card.style.display = '';
+  document.getElementById('led-status').textContent = d.nets.length + ' controlador(es) detectado(s)';
+  cont.innerHTML = d.nets.map((n,i) => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--surface2)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <div>
+          <span style="font-weight:600;color:#f97316">${escHtml(n.ssid)}</span>
+          <span style="color:var(--muted);font-size:.75rem;margin-left:8px">${n.bssid} ch${n.ch} ${n.rssi}dBm</span>
+          <span style="background:#f9731622;color:#f97316;border-radius:4px;padding:1px 6px;font-size:.7rem;margin-left:6px">${n.vendor}</span>
+          ${n.open ? '<span style="background:#22c55e22;color:#22c55e;border-radius:4px;padding:1px 6px;font-size:.7rem;margin-left:4px">ABERTA</span>' : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:#f97316;padding:4px 10px;font-size:.75rem" onclick="ledAttack(${i},'deauth')"><i class="fa-solid fa-ban"></i> Deauth</button>
+          <button class="btn btn-sm btn-ghost" style="padding:4px 10px;font-size:.75rem" onclick="ledAttack(${i},'flood')"><i class="fa-solid fa-wave-square"></i> Flood</button>
+          <button class="btn btn-sm btn-ghost" style="padding:4px 10px;font-size:.75rem" onclick="ledAttack(${i},'disrupt')"><i class="fa-solid fa-bolt"></i> Disrupt UDP</button>
+        </div>
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Protocolo: ${n.proto} | Porta UDP: ${n.proto === 'CL' ? 9980 : 5005}</div>
+    </div>`).join('');
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function wifiteStart() {
   const rssi   = -(parseInt(document.getElementById('wf-rssi').value)   || 75);

