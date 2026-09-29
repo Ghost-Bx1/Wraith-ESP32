@@ -591,14 +591,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
         <button id="d-int-1" class="btn btn-ghost btn-active" style="font-size:.7rem;padding:4px 12px" onclick="setDeauthIntensity(1)">🟡 Normal</button>
         <button id="d-int-2" class="btn btn-ghost" style="font-size:.7rem;padding:4px 12px" onclick="setDeauthIntensity(2)">🔴 Agressivo</button>
       </div>
-      <div style="font-size:.65rem;color:var(--muted);margin-top:4px" id="d-int-desc">Normal: 64 frames/ciclo - balanceia efetividade e estabilidade</div>
+      <div style="font-size:.65rem;color:var(--muted);margin-top:4px" id="d-int-desc">Normal: 256 frames/ciclo - balanceia efetividade e estabilidade</div>
+    </div>
+    <div style="margin:10px 0">
+      <label style="font-size:.75rem;color:var(--muted);margin-bottom:6px;display:block">Técnicas Avançadas</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <label class="check-row" style="margin:0;background:var(--card2);border-radius:6px;padding:5px 10px;cursor:pointer">
+          <input type="checkbox" id="d-null" checked onchange="updateDeauthOptions()">
+          <span style="font-size:.72rem"><b>Null Frame PM=1</b> — power-save trick, para fluxo de dados</span>
+        </label>
+        <label class="check-row" style="margin:0;background:var(--card2);border-radius:6px;padding:5px 10px;cursor:pointer">
+          <input type="checkbox" id="d-pmf" onchange="updateDeauthOptions()">
+          <span style="font-size:.72rem"><b>SA Query Flood</b> — bypass 802.11w/PMF</span>
+        </label>
+        <label class="check-row" style="margin:0;background:var(--card2);border-radius:6px;padding:5px 10px;cursor:pointer">
+          <input type="checkbox" id="d-assoc" onchange="updateDeauthOptions()">
+          <span style="font-size:.72rem"><b>Auth Flood</b> — inunda tabela de associação do AP</span>
+        </label>
+      </div>
     </div>
     <div class="btns">
       <button class="btn btn-danger" onclick="deauthStart()"><i class="fa-solid fa-bolt"></i> Iniciar Deauth</button>
       <button class="btn btn-ghost" onclick="apiPost('/api/deauth/stop')"><i class="fa-solid fa-stop"></i> Parar</button>
       <button class="btn btn-ghost" onclick="fillFromSel()"><i class="fa-solid fa-crosshairs"></i> Usar AP Selecionado</button>
     </div>
-    <div class="info-box warn" style="margin-top:12px">8 reason codes diferentes em ambas direções (AP→Client e Client→AP) com sequence counter incremental para parecer tráfego legítimo.</div>
+    <div class="info-box warn" style="margin-top:12px">16 reason codes em ambas direções + disassoc + null frames (power-save) + SA Query (PMF bypass) + auth flood. Sequence counter incremental.</div>
   </div>
   <!-- Target Manager -->
   <div class="card">
@@ -1826,9 +1843,9 @@ renderTargets();
 // ── DEAUTH ────────────────────────────────────────────────────────────────────
 let _deauthIntensity = 1;
 const _intensityDesc = [
-  'Suave: 16 frames/ciclo - mínima visibilidade, menor efetividade',
-  'Normal: 64 frames/ciclo - balanceia efetividade e estabilidade',
-  'Agressivo: 128 frames/ciclo - máxima efetividade, pode causar instabilidade no AP'
+  'Suave: 64 frames/ciclo - mínima visibilidade, menor efetividade',
+  'Normal: 256 frames/ciclo - balanceia efetividade e estabilidade',
+  'Agressivo: 512 frames/ciclo - máxima efetividade, pode causar instabilidade no AP'
 ];
 function setDeauthIntensity(v) {
   _deauthIntensity = v;
@@ -1839,6 +1856,13 @@ function setDeauthIntensity(v) {
   const desc = document.getElementById('d-int-desc');
   if (desc) desc.textContent = _intensityDesc[v];
   apiPost('/api/deauth/intensity', { level: v });
+}
+function updateDeauthOptions() {
+  apiPost('/api/deauth/options', {
+    nullFrames: document.getElementById('d-null')?.checked ?? true,
+    pmfBypass:  document.getElementById('d-pmf')?.checked  ?? false,
+    assocFlood: document.getElementById('d-assoc')?.checked ?? false,
+  });
 }
 function deauthStart() {
   const bssid = document.getElementById('d-bssid').value.trim();

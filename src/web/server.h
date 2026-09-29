@@ -133,6 +133,9 @@ private:
         doc["intel_dns"]      = (int)TargetIntel::get().dnsQueries.size();
         doc["intel_http"]     = (int)TargetIntel::get().httpCreds.size();
         doc["deauth_multi"]   = Deauther::get().multiMode;
+        doc["deauth_null"]    = Deauther::get().nullFrames;
+        doc["deauth_pmf"]     = Deauther::get().pmfBypass;
+        doc["deauth_assoc"]   = Deauther::get().assocFlood;
         doc["hidden_scan"]    = HiddenScanner::get().running;
         doc["hidden_count"]   = (int)HiddenScanner::get().revealed.size();
         doc["hidden_targets"] = (int)HiddenScanner::get().targets.size();
@@ -252,6 +255,17 @@ private:
             Deauther::get().intensity = lvl;
             const char* names[] = {"suave","normal","agressivo"};
             LOG.info("[DEAUTH] Intensidade: " + String(names[lvl]));
+            req->send(200, "application/json", "{\"ok\":true}");
+        });
+
+        _postJson("/api/deauth/options", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            auto& d = Deauther::get();
+            if (!doc["nullFrames"].isNull())  d.nullFrames  = doc["nullFrames"]  | true;
+            if (!doc["pmfBypass"].isNull())   d.pmfBypass   = doc["pmfBypass"]   | false;
+            if (!doc["assocFlood"].isNull())  d.assocFlood  = doc["assocFlood"]  | false;
+            LOG.info("[DEAUTH] Opções: null=" + String(d.nullFrames) +
+                     " pmf=" + String(d.pmfBypass) +
+                     " assoc=" + String(d.assocFlood));
             req->send(200, "application/json", "{\"ok\":true}");
         });
 
