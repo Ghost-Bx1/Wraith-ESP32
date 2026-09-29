@@ -15,11 +15,15 @@ public:
     struct WPSResult {
         String bssid, ssid;
         uint8_t channel;
-        String version;      // "1.0" / "2.0"
+        String version;       // "1.0" / "2.0"
+        String version2;      // WPS 2.0 Version2 attribute (0x1049)
         String configMethods; // "Push Button", "PIN", etc.
+        String extConfigMethods; // WPS 2.0 Extended Config Methods (0x1053)
         bool   locked;        // AP Setup Locked (WPS bloqueado)
         bool   pushButton;
         bool   pinEnabled;
+        bool   wps2;          // true = Version2 attribute presente
+        bool   pixieDustVuln; // true = provável vulnerabilidade Pixie Dust
         int    rssi;
     };
 
@@ -56,11 +60,19 @@ private:
         uint16_t seq;
     } __attribute__((packed));
 
-    static const char* _cfgMethod(uint16_t m) {
-        if (m & 0x0010) return "PIN+PBC";
-        if (m & 0x0080) return "PIN";
-        if (m & 0x0200) return "PBC";
-        return "Unknown";
+    static String _cfgMethodStr(uint16_t m) {
+        String s = "";
+        if (m & 0x0004) s += "USB,";
+        if (m & 0x0008) s += "Ethernet,";
+        if (m & 0x0010) s += "Label,";
+        if (m & 0x0020) s += "Display,";
+        if (m & 0x0040) s += "ExtNFC,";
+        if (m & 0x0080) s += "IntNFC,";
+        if (m & 0x0100) s += "NFC,";
+        if (m & 0x0200) s += "PBC,";
+        if (m & 0x0400) s += "Keypad,";
+        if (s.endsWith(",")) s = s.substring(0, s.length()-1);
+        return s.isEmpty() ? "Unknown" : s;
     }
 
     static void _rxCb(void* buf, wifi_promiscuous_pkt_type_t type) {
@@ -107,10 +119,14 @@ private:
                     res.channel = pkt->rx_ctrl.channel;
                     res.rssi    = pkt->rx_ctrl.rssi;
                     res.locked  = false;
-                    res.pinEnabled   = false;
-                    res.pushButton   = false;
-                    res.version      = "1.0";
-                    res.configMethods = "Unknown";
+                    res.pinEnabled      = false;
+                    res.pushButton      = false;
+                    res.wps2            = false;
+                    res.pixieDustVuln   = false;
+                    res.version         = "1.0";
+                    res.version2        = "";
+                    res.configMethods   = "Unknown";
+                    res.extConfigMethods = "";
 
                     size_t tp = 4;
                     while (tp + 4 < tlen) {
@@ -129,9 +145,32 @@ private:
                             case 0x1012: // Config Methods
                                 if (alen >= 2) {
                                     uint16_t m = (av[0]<<8)|av[1];
-                                    res.configMethods = _cfgMethod(m);
-                                    res.pushButton = (m & 0x0200) || (m & 0x0010);
-                                    res.pinEnabled = (m & 0x0080) || (m & 0x0010);
+                                    res.configMethods = _cfgMethodStr(m);
+                                    res.pushButton = (m & 0x0200) != 0;
+                                    res.pinEnabled = (m & 0x0080) || (m & 0x0020) || (m & 0x0010);
+                                }
+                                break;
+                            case 0x1049: // WPS 2.0 Version2 subelement
+                                res.wps2 = true;
+                                if (alen >= 1)
+                                    res.version2 = String(av[0] >> 4) + "." + String(av[0] & 0xF);
+                                break;
+                            case 0x1053: // WPS 2.0 Extended Config Methods
+                                if (alen >= 2) {
+                                    uint16_t em = (av[0]<<8)|av[1];
+                                    res.extConfigMethods = _cfgMethodStr(em);
+                                    // PIN via Extended = Pixie Dust candidate
+                                    if (em & 0x0020) { res.pinEnabled = true; res.pixieDustVuln = true; }
+                                }
+                                break;
+                            case 0x1003: // Device Name — heurística Pixie Dust
+                                // Chipsets Ralink/MediaTek conhecidos como vulneráveis
+                                if (alen > 0) {
+                                    String dn = String((char*)av).substring(0, min((int)alen, 32));
+                                    dn.toLowerCase();
+                                    if (dn.indexOf("ralink") >= 0 || dn.indexOf("mediatek") >= 0 ||
+                                        dn.indexOf("broadcom") >= 0 || dn.indexOf("realtek") >= 0)
+                                        res.pixieDustVuln = true;
                                 }
                                 break;
                         }
@@ -145,8 +184,11 @@ private:
                     if (!dup && self.results.size() < 64) {
                         self.results.push_back(res);
                         String log = "[WPS] " + res.ssid + " [" + res.bssid + "] v" + res.version;
+                        if (res.wps2) log += "/2.0";
                         if (res.locked) log += " LOCKED";
                         if (res.pinEnabled) log += " PIN-VULN";
+                        if (res.pixieDustVuln) log += " PIXIE-DUST";
+                        if (!res.extConfigMethods.isEmpty()) log += " ext:" + res.extConfigMethods;
                         LOG.data(log);
                     }
                 }

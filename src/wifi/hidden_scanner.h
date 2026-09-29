@@ -58,35 +58,46 @@ public:
         LOG.info("[HIDDEN] " + String(targets.size()) + " APs ocultos encontrados");
     }
 
-    // tick: envia probes para cada alvo, ciclando por SSIDs comuns
+    // tick: envia probes para cada alvo com channel hopping completo
     void tick() {
         if (!running) return;
         static size_t targetIdx = 0;
         static size_t ssidIdx   = 0;
+        static uint8_t hopCh    = 1;
         static unsigned long next = 0;
         if (millis() < next) return;
 
-        // Probe direcionado para BSSID específico
+        // Probe direcionado para BSSID específico (no canal do alvo)
         if (!targets.empty()) {
             const HiddenAP& t = targets[targetIdx % targets.size()];
             if (t.ssid.isEmpty()) {
                 uint8_t bssid[6];
                 _parseMac(t.bssid.c_str(), bssid);
-                esp_wifi_set_channel(t.channel, WIFI_SECOND_CHAN_NONE);
-                // Probe com SSID vazio (AP responde com seu SSID real)
+                // Probe vazio — AP responde com SSID real
                 _sendProbeRequest(bssid, t.channel, "", false);
-                // Probe com SSIDs comuns para testar
+                // Probe com SSID da wordlist
+                _sendProbeRequest(bssid, t.channel, _commonSSIDs[ssidIdx % _numSSIDs], true);
+                ssidIdx++;
+                // Probe com mais 2 SSIDs por tick para cobertura mais rápida
                 _sendProbeRequest(bssid, t.channel, _commonSSIDs[ssidIdx % _numSSIDs], true);
                 ssidIdx++;
             }
             targetIdx++;
         }
 
-        // Probe broadcast com SSIDs comuns para revelar APs ocultos desconhecidos
-        _sendProbeRequest(nullptr, 0, _commonSSIDs[ssidIdx % _numSSIDs], true);
+        // Probe broadcast em canal atual do hop (cobre APs ocultos sem BSSID conhecido)
+        esp_wifi_set_channel(hopCh, WIFI_SECOND_CHAN_NONE);
+        _sendProbeRequest(nullptr, hopCh, _commonSSIDs[ssidIdx % _numSSIDs], true);
         ssidIdx++;
+        _sendProbeRequest(nullptr, hopCh, _commonSSIDs[ssidIdx % _numSSIDs], true);
+        ssidIdx++;
+        // Probe wildcard (SSID vazio) em broadcast — captura qualquer AP oculto
+        _sendProbeRequest(nullptr, hopCh, "", false);
 
-        next = millis() + 150;
+        // Avança canal 1→13 a cada tick
+        hopCh = (hopCh % 13) + 1;
+
+        next = millis() + 90; // mais rápido: ~11 probes/s por canal
     }
 
 private:
@@ -174,8 +185,25 @@ private:
 };
 
 inline const char* const HiddenScanner::_commonSSIDs[] = {
-    "linksys","default","home","wifi","router","network","internet","casa",
-    "AP","NETGEAR","TP-LINK","ASUS","Xiaomi","Huawei","admin","guest",
-    "private","hidden","secure","office","work","empresa","loja","hotel"
+    // Genéricos comuns
+    "home","wifi","router","network","internet","wireless","wlan","default",
+    "admin","guest","private","hidden","secure","office","work","hotel",
+    "AP","AP1","AP2","mynetwork","myrouter","homenetwork","homewifi",
+    // Provedores/roteadores Brasil
+    "NET","NET_WiFi","CLARO","CLARO_NET","VIVO","VIVO_WIFI","TIM","OI",
+    "casa","wifi_casa","internet_casa","minhacasa","minha_rede","meu_wifi",
+    "empresa","loja","escritorio","condominio","coworking","apartamento",
+    // Fabricantes comuns
+    "NETGEAR","TP-LINK","TP-Link","ASUS","Xiaomi","Huawei","Intelbras",
+    "linksys","Linksys","D-Link","dlink","TOTOLINK","ARCHER","TL-WR",
+    "Keenetic","GL-iNet","MikroTik","Ubiquiti","UniFi","AirMax",
+    // Nomes de roteadores populares
+    "AndroidAP","iPhone","Redmi","POCO","Galaxy","OnePlus","Pixel",
+    "DIRECT","WLAN_","WiFi-","Net_","Rede_","AP_",
+    // Setores específicos
+    "hotel_wifi","hotel_guests","lobby","reception","conference","meeting",
+    "staff","back_office","pos","caixa","pdv","loja_1","loja_2",
+    // Padrões numéricos
+    "wifi1","wifi2","wifi3","network1","ap001","ap002","ap01",
 };
-inline const int HiddenScanner::_numSSIDs = 24;
+inline const int HiddenScanner::_numSSIDs = 80;

@@ -563,10 +563,10 @@ private:
         });
         _postJson("/api/wifite/config", [](AsyncWebServerRequest* req, JsonDocument& doc) {
             auto& w = WifiteMode::get();
-            if (doc.containsKey("minRSSI"))        w.minRSSI        = doc["minRSSI"] | 70;
-            if (doc.containsKey("pmkidTimeout"))   w.pmkidTimeoutMs = (doc["pmkidTimeout"] | 30) * 1000;
-            if (doc.containsKey("deauthTimeout"))  w.deauthTimeoutMs= (doc["deauthTimeout"] | 60) * 1000;
-            if (doc.containsKey("skipWeak"))       w.skipWeak       = doc["skipWeak"] | true;
+            if (!doc["minRSSI"].isNull())       w.minRSSI        = doc["minRSSI"] | 70;
+            if (!doc["pmkidTimeout"].isNull())  w.pmkidTimeoutMs = (doc["pmkidTimeout"] | 30) * 1000;
+            if (!doc["deauthTimeout"].isNull()) w.deauthTimeoutMs= (doc["deauthTimeout"] | 60) * 1000;
+            if (!doc["skipWeak"].isNull())      w.skipWeak       = doc["skipWeak"] | true;
             req->send(200,"application/json","{\"ok\":true}");
         });
 
