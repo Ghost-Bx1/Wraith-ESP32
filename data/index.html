@@ -1640,6 +1640,37 @@ function filterAPs(val) {
   renderAPTable(_apList);
 }
 
+function rssiToQuality(rssi) {
+  if (!rssi) return 0;
+  return Math.max(0, Math.min(100, Math.round((rssi + 90) / 60 * 100)));
+}
+
+function rssiToDistance(rssi) {
+  if (!rssi) return '?';
+  const d = Math.pow(10, (-65 - rssi) / (10 * 2.7));
+  return d < 1 ? '<1m' : d < 100 ? '~' + d.toFixed(1) + 'm' : '>100m';
+}
+
+function ouiLookup(bssid) {
+  if (!bssid) return '';
+  const p = bssid.substring(0, 8).toUpperCase();
+  const tbl = {
+    'B8:27:EB':'Raspberry Pi','DC:A6:32':'Raspberry Pi','E4:5F:01':'Raspberry Pi',
+    '28:CF:E9':'Apple','AC:BC:32':'Apple','F0:18:98':'Apple','84:85:06':'Apple',
+    'A4:C3:F0':'Apple','3C:CD:5D':'Apple','14:F6:5A':'Apple','38:F9:D3':'Apple',
+    '68:09:27':'Samsung','E4:92:FB':'Samsung','A0:82:1F':'Samsung','50:A4:D0':'Samsung',
+    'F4:42:8F':'Google','54:60:09':'Google','48:D6:D5':'Google',
+    '90:61:AE':'Xiaomi','08:21:EF':'Xiaomi','78:11:DC':'Xiaomi','60:38:E0':'Xiaomi',
+    '94:B8:6D':'Motorola','14:2D:27':'TP-Link','14:CC:20':'TP-Link','50:3E:AA':'TP-Link',
+    'C4:E9:84':'TP-Link','EC:08:6B':'TP-Link','30:9C:23':'Netgear','A0:63:91':'Netgear',
+    'C0:3F:D5':'D-Link','28:10:7B':'D-Link','B0:C5:54':'Asus','10:7B:44':'Asus',
+    '60:45:CB':'Intelbras','00:1E:8C':'Intelbras','DC:9F:DB':'Huawei','48:46:FB':'Huawei',
+    '70:72:CF':'Huawei','00:50:7F':'Cisco','00:1A:A1':'Cisco','00:26:CA':'Cisco',
+    '00:0C:E7':'Mikrotik','6C:3B:6B':'Mikrotik','18:FD:74':'Ubiquiti','24:A4:3C':'Ubiquiti'
+  };
+  return tbl[p] || '';
+}
+
 function renderAPTable(data) {
   const tbody = document.getElementById('t-aps');
   tbody.innerHTML = '';
