@@ -15,13 +15,25 @@
 #define RADIO2_TX      17
 #define RADIO2_RX      16
 
-// ── Limites ───────────────────────────────────────────────────────────────────
-#define MAX_LOG_LINES     300
-#define MAX_NETS          80
-#define MAX_CLIENTS       200
-#define MAX_PROBES        400
-#define MAX_HANDSHAKES    150
-#define MAX_PMKIDS        80
+// ── Limites — adaptativos via PSRAM (ESP32-S3 N16R8 = 8MB PSRAM) ─────────────
+#ifdef BOARD_HAS_PSRAM
+  // N16R8 com 8MB PSRAM: limites muito maiores
+  #define MAX_LOG_LINES     2000
+  #define MAX_NETS          256
+  #define MAX_CLIENTS       1000
+  #define MAX_PROBES        2000
+  #define MAX_HANDSHAKES    500
+  #define MAX_PMKIDS        400
+#else
+  // ESP32 padrão 520KB SRAM: limites conservadores
+  #define MAX_LOG_LINES     300
+  #define MAX_NETS          80
+  #define MAX_CLIENTS       200
+  #define MAX_PROBES        400
+  #define MAX_HANDSHAKES    150
+  #define MAX_PMKIDS        80
+#endif
+
 #define DEAUTH_BURST      256     // frames por ciclo (modo normal)
 #define DEAUTH_BURST_SOFT 64      // frames por ciclo (modo suave)
 #define DEAUTH_BURST_HARD 512     // frames por ciclo (modo agressivo)

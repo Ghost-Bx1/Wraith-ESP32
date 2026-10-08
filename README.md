@@ -332,26 +332,94 @@ void setup() {
 
 ## Instalação
 
-### Pré-requisitos
+Este guia cobre tudo desde o zero — do download do software ate o dispositivo funcionando.
 
-```bash
+### Passo 1 — Instalar o Python e PlatformIO
+
+O PlatformIO e o sistema de build que compila e envia o firmware para o ESP32.
+
+**Windows:**
+```powershell
+# Instalar Python (se nao tiver)
+winget install Python.Python.3
+
+# Instalar PlatformIO via pip
 pip install platformio
+
+# Verificar instalacao
+pio --version
 ```
 
-### Clonar o Repositório
+**Linux/macOS:**
+```bash
+pip3 install platformio
+pio --version
+```
+
+> **Alternativa:** instalar a extensao [PlatformIO IDE](https://platformio.org/install/ide?install=vscode) no VS Code — interface grafica completa.
+
+### Passo 2 — Clonar o Repositório
 
 ```bash
 git clone https://github.com/Ghost-Bx1/Ghost-Raptor-Mobile-ESP32.git
 cd Ghost-Raptor-Mobile-ESP32
 ```
 
-### Upload do Firmware (código C++)
+**Estrutura do projeto:**
+```
+Ghost-Raptor-Mobile-ESP32/
+├── src/
+│   ├── main.cpp              # Loop principal, setup WiFi/BLE
+│   ├── config.h              # Senhas, limites, pinos
+│   ├── wifi/
+│   │   ├── scanner.h         # Scanner WiFi
+│   │   ├── deauth.h          # Deauth + assocFlood + reconnectBlock
+│   │   ├── evil_twin.h       # Evil Twin + captive portal
+│   │   ├── sniffer.h         # Captura EAPOL/handshakes/PMKIDs
+│   │   ├── pmkid_fisher.h    # PMKID sem clientes (Auth+Assoc inject)
+│   │   ├── karma.h           # Karma + MANA attack
+│   │   ├── beacon_flood.h    # Beacon flood + channel hop + hidden
+│   │   ├── wifite_mode.h     # Auto-attack orquestrador
+│   │   └── wps_scanner.h     # Deteccao WPS PIN/Pixie Dust
+│   ├── bluetooth/            # BLE Spam (Apple/Samsung/Windows)
+│   └── web/server.h          # ESPAsyncWebServer + REST + WebSocket
+├── data/
+│   └── index.html            # SPA completa (~3000 linhas)
+├── platformio.ini            # Configuracao de build por placa
+└── partitions_16mb.csv       # Tabela de particoes para N16R8
+```
+
+### Passo 3 — Conectar o ESP32
+
+**ESP32 D0WD-V3 (padrao):**
+- Conecte via cabo USB ao computador
+- Verifique a porta: Windows = `COM3` (geralmente), Linux = `/dev/ttyUSB0`
+
+**ESP32-S3 N16R8:**
+- Use a porta **USB-C da direita** (CH343P serial) para programar
+- Ou a porta **USB-C da esquerda** (USB OTG nativo) — ambas funcionam
+- Windows instala driver automaticamente (CH343P)
+- Linux: `ls /dev/ttyACM*` ou `/dev/ttyUSB*`
+
+**Verificar porta no Windows:**
+```powershell
+# Abre gerenciador de dispositivos na secao "Portas COM e LPT"
+devmgmt.msc
+```
+
+**Se o ESP32 nao aparecer:**
+- ESP32 padrao: instalar driver [CH340](https://www.wch-ic.com/downloads/CH341SER_EXE.html)
+- ESP32-S3 N16R8: instalar driver [CH343P](https://www.wch-ic.com/downloads/CH343SER_EXE.html)
+
+### Passo 4 — Upload do Firmware
+
+O firmware e o codigo C++ que controla o hardware.
 
 ```bash
-# ESP32 padrão (WROOM-32, DevKit v1)
+# ESP32 padrao (WROOM-32, DevKit v1)
 pio run --target upload -e esp32dev
 
-# ESP32-S3 N16R8 - 16MB Flash + 8MB PSRAM (RECOMENDADO)
+# ESP32-S3 N16R8 — 16MB Flash + 8MB PSRAM (RECOMENDADO)
 pio run --target upload -e esp32-s3-n16r8
 
 # ESP32-S3 generico (4MB Flash)
@@ -361,35 +429,89 @@ pio run --target upload -e esp32-s3
 pio run --target upload -e esp32-c3
 ```
 
-### Upload do Filesystem (interface web)
+**Especificar porta manualmente (se o PlatformIO nao detectar):**
+```bash
+pio run --target upload -e esp32dev --upload-port COM3
+# Linux:
+pio run --target upload -e esp32dev --upload-port /dev/ttyUSB0
+```
 
-O filesystem LittleFS contém o arquivo `data/index.html` com toda a interface web.
+**Saida esperada de sucesso:**
+```
+Uploading .pio/build/esp32dev/firmware.bin
+...
+Hash of data verified.
+========================= [SUCCESS] Took XX seconds =========================
+```
+
+**Se der erro de permissao (Linux):**
+```bash
+sudo usermod -a -G dialout $USER
+# Fazer logout e login novamente
+```
+
+**Modo bootloader manual** (se o upload falhar):
+1. Segure o botao **BOOT** no ESP32
+2. Pressione e solte o botao **RST** rapidamente
+3. Solte o **BOOT**
+4. Execute o comando de upload novamente
+
+### Passo 5 — Upload do Filesystem (Interface Web)
+
+O filesystem LittleFS contem o arquivo `data/index.html` com toda a interface web. **Este passo e obrigatório** — sem ele, o painel nao aparece.
 
 ```bash
-# ESP32 padrão
+# ESP32 padrao
 pio run --target uploadfs -e esp32dev
 
-# ESP32-S3 N16R8 (RECOMENDADO - 6MB LittleFS disponivel)
+# ESP32-S3 N16R8 (6MB LittleFS disponivel)
 pio run --target uploadfs -e esp32-s3-n16r8
 
 # ESP32-S3 generico
 pio run --target uploadfs -e esp32-s3
 ```
 
-**Windows - script automático:**
-```powershell
-.\upload_fs.ps1
+> **Importante:** Firmware e Filesystem sao uploads separados. Se modificar o `data/index.html`, precisa rodar `uploadfs` novamente. Se modificar codigo C++ em `src/`, precisa rodar `upload` novamente.
+
+**Saida esperada:**
+```
+Building FS image from 'data' directory to .pio/build/.../littlefs.bin
+/index.html
+...
+Hash of data verified.
+========================= [SUCCESS] Took XX seconds =========================
 ```
 
-> **Nota**: O upload do filesystem e o upload do firmware são operações separadas. Sempre que modificar `data/index.html`, é necessário executar `uploadfs`. Mudanças no código C++ requerem `upload`.
+### Passo 6 — Primeiro Acesso
 
-### Primeiro Acesso
+Apos o upload completar, o ESP32 reinicia automaticamente:
 
-1. Ligue o ESP32 (via USB ou bateria)
-2. Aguarde ~3 segundos para inicializar
-3. No celular ou notebook, conecte ao WiFi: **`GhostPredator`** / senha: **`predator123`**
-4. Abra o navegador e acesse: **`http://192.168.4.1`**
-5. Digite a senha do painel: **`predator`**
+1. **Aguarde ~3 segundos** para o ESP32 inicializar
+2. No celular ou notebook, abra as **configuracoes de WiFi**
+3. Conecte na rede: **`GhostPredator`**
+4. Senha WiFi: **`predator123`**
+5. Abra o navegador e acesse: **`http://192.168.4.1`**
+6. Digite a senha do painel: **`predator`**
+
+> **Dica:** Acesse tambem por **`http://ghostpredator.local`** (mDNS) em vez de digitar o IP.
+
+### Solucao de Problemas Comuns
+
+| Problema | Causa | Solucao |
+|---|---|---|
+| Upload falha com "No serial data received" | ESP32 nao entrou em bootloader | Segurar BOOT + pressionar RST |
+| Porta COM nao aparece | Driver nao instalado | Instalar CH340 (ESP32) ou CH343P (S3) |
+| Painel web em branco / 404 | Filesystem nao foi uploaded | Rodar `uploadfs` |
+| "A porta COM3 nao existe" | Porta mudou ou desconectado | Verificar no Gerenciador de Dispositivos |
+| Upload OK mas WiFi GhostPredator nao aparece | Firmware com erro | Ver Serial Monitor: `pio device monitor` |
+| Pagina carrega mas sem dados | Cookie de sessao expirou | Fazer login novamente |
+
+**Ver logs em tempo real:**
+```bash
+pio device monitor --port COM3 --baud 115200
+# ou
+pio device monitor -e esp32dev
+```
 
 ---
 
