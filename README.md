@@ -750,209 +750,335 @@ Fingerprinting detalhado de dispositivos associados a uma rede monitorada em mod
 
 > **AVISO**: Use apenas em redes próprias ou com autorização expressa e documentada do responsável pela rede. Uso não autorizado é crime.
 
+Esta seção explica cada ataque de forma completa: o que é, como funciona na prática (em linguagem simples), e os detalhes técnicos para quem quiser entender mais fundo.
+
 ---
 
-### Deauth Attack
+### Deauth Attack (Ataque de Desautenticacao)
 
-O ataque de desautenticação é a técnica mais eficaz para desconectar clientes WiFi de um AP. Baseia-se em uma fraqueza fundamental do protocolo 802.11: frames de gerenciamento não são autenticados em redes sem PMF (802.11w).
+#### O que e?
 
-**Fundamento técnico:**
+O Deauth Attack desconecta forcadamente qualquer dispositivo (celular, notebook, smart TV, etc.) de uma rede WiFi. E como se alguem fingisse ser o roteador e mandasse uma mensagem dizendo "voce esta desconectado" - e o celular obedece sem questionar.
 
-No protocolo IEEE 802.11, qualquer estação pode enviar um frame de `Deauthentication` (subtipo 0x0C) ou `Disassociation` (subtipo 0x0A) para qualquer outra estação. Ao receber esse frame, o destinatário desconecta imediatamente - sem verificar a autenticidade do remetente.
+#### Por que funciona?
 
-**Como funciona o ataque:**
+O protocolo WiFi (IEEE 802.11) foi projetado nos anos 90 sem autenticacao nos pacotes de gerenciamento. Isso significa que qualquer pessoa no mesmo canal pode enviar um pacote se passando pelo roteador, e o dispositivo-alvo vai acreditar e se desconectar. Essa falha existe em praticamente todos os roteadores e dispositivos WiFi que nao tem PMF (Protected Management Frames) ativo.
 
-1. O ESP32 forja um frame deauth com endereço de origem = MAC do AP e destino = MAC do cliente (ou FF:FF:FF:FF:FF:FF para broadcast)
-2. O frame é injetado via `esp_wifi_80211_tx()` no canal correto do AP
-3. O cliente recebe o frame e desconecta
-4. O cliente tenta reconectar - durante a reconexão, o 4-way handshake é capturado pelo sniffer
+> **Analogia**: Imagine que qualquer pessoa pode ligar para o seu celular fingindo ser o banco e dizer "sua conta foi encerrada, desligue agora". Se voce acreditar sem verificar, e exatamente o que acontece com os dispositivos WiFi.
 
-**Técnicas implementadas (v4.1+):**
+#### Como funciona na pratica, passo a passo:
 
-| Técnica | Subtipo | Descrição |
-|---------|---------|-----------|
-| **Deauth AP->Cliente** | 0x0C | Frame forjado como se viesse do AP para o cliente |
-| **Deauth Cliente->AP** | 0x0C | Frame forjado como se viesse do cliente para o AP |
-| **Disassoc AP->Cliente** | 0x0A | Disassociação (mais agressiva que deauth) |
-| **16 Reason Codes** | - | Rotaciona entre todos os 16 reason codes IEEE 802.11-2020 |
-| **Null Data Frame PM=1** | 0x28 | Power-save trick: AP bufferiza tráfego do cliente |
-| **SA Query Flood** | 0x0B | Bypass de 802.11w/PMF |
-| **Auth Flood** | 0x0B | Enche tabela de associações do AP com MACs aleatórios |
-| **Sequence Counter** | - | Incrementa contador para parecer tráfego legítimo |
+```
+1. O Ghost Predator entra em modo monitor (escuta todo o trafego WiFi)
+2. Voce seleciona a rede-alvo e o dispositivo que quer desconectar
+3. O ESP32 fabrica um pacote falso de "deautenticacao":
+   - Campo "De:" = MAC do roteador (falsificado)
+   - Campo "Para:" = MAC do celular (ou FF:FF:FF:FF:FF:FF para todos)
+   - Campo "Motivo:" = Codigo de razao (ex: "AP esta sendo desligado")
+4. O pacote e injetado no ar via esp_wifi_80211_tx()
+5. O celular recebe o pacote, acha que e do roteador, e desconecta
+6. O celular automaticamente tenta se reconectar
+7. Durante a reconexao, o sniffer do Ghost Predator captura o handshake WPA2
+```
 
-**Modos de intensidade:**
+#### Tecnicas implementadas:
 
-| Modo | Frames/ciclo | Uso |
-|------|-------------|-----|
-| Suave | 64 | Teste rápido, menor interferência |
-| Normal | 256 | Uso geral |
-| Agressivo | 512 | Máximo impacto, bypassar PMF básico |
+| Tecnica | O que faz |
+|---------|-----------|
+| **Deauth AP->Cliente** | Finge ser o roteador e manda o cliente embora |
+| **Deauth Cliente->AP** | Finge ser o cliente e manda uma mensagem de "saida" ao roteador |
+| **Disassociacao** | Variante mais agressiva do deauth (nivel de protocolo diferente) |
+| **16 Reason Codes** | Rotaciona entre os 16 codigos de motivo do protocolo para dificultar deteccao |
+| **Null Data Frame (PM=1)** | Truque de power-save: faz o roteador guardar pacotes em buffer e para de entregar ao cliente |
+| **SA Query Flood** | Tecnica para tentar bypassar a protecao PMF em roteadores mais modernos |
+| **Auth Flood** | Enche a tabela de conexoes do roteador com MACs falsos (pode causar lentidao no AP) |
 
-**Parâmetros de configuração:**
-- **BSSID**: MAC do AP-alvo (preenchido automaticamente ao selecionar rede)
-- **Canal**: canal de operação do AP (preenchido automaticamente)
-- **Cliente**: MAC do cliente específico (ou FF:FF:FF:FF:FF:FF para todos os clientes)
+#### Modos de intensidade:
+
+| Modo | Pacotes por ciclo | Quando usar |
+|------|-------------------|-------------|
+| Suave | 64 | Teste inicial, menos interferencia no ambiente |
+| Normal | 256 | Uso geral na maioria dos cenarios |
+| Agressivo | 512 | Maximo impacto, tentar bypassar PMF basico |
+
+#### O que voce configura no painel:
+- **Rede-alvo**: selecione do scan - o BSSID (MAC do roteador) e canal sao preenchidos automaticamente
+- **Cliente especifico**: selecione um dispositivo especifico para desconectar, ou deixe em broadcast (FF:FF:FF:FF:FF:FF) para expulsar todos ao mesmo tempo
 - **Modo**: suave / normal / agressivo
 
-**Contrameasures - PMF/802.11w:**
-A proteção PMF (Protected Management Frames, 802.11w) assina criptograficamente frames de gerenciamento unicast, tornando deauths falsificados ineficazes contra clientes específicos.
+#### Protecao contra este ataque (PMF / 802.11w):
+Roteadores modernos com **PMF (Protected Management Frames)** habilitado assinam criptograficamente os pacotes de gerenciamento, tornando os deauths falsificados ineficazes para clientes especificos. O Ghost Predator tenta contornar isso com **SA Query Flood**: inunda o roteador com requisicoes que alguns firmwares nao conseguem processar rapido o suficiente.
 
-O Ghost Predator implementa **SA Query Flood** como técnica de bypass: ao inundar o AP com SA Query requests em alta velocidade, alguns firmwares ficam sobrecarregados e não conseguem verificar a proteção para todos os frames.
-
-**Live Stats no painel:**
-- Número total de frames enviados
-- Taxa em frames por segundo (f/s)
-- Tempo decorrido do ataque (timer ao vivo)
+#### O que aparece no painel:
+- Total de pacotes enviados
+- Taxa de envio (pacotes por segundo)
+- Timer ao vivo do ataque
 
 ---
 
-### Evil Twin (AP Clone + Captive Portal)
+### Evil Twin (Rede Falsa + Portal Captive)
 
-O Evil Twin cria uma cópia exata de uma rede WiFi legítima com o objetivo de capturar credenciais de usuários que se conectem ao AP falso.
+#### O que e?
 
-**Fluxo completo do ataque:**
+O Evil Twin cria uma copia identica de uma rede WiFi real - mesmo nome, mesmo tipo de seguranca (mas sem senha). O objetivo e fazer as pessoas se conectarem sem perceber e, ao tentar acessar a internet, verem uma pagina falsa pedindo a senha do WiFi.
+
+#### Por que funciona?
+
+Quando voce esta desconectado do seu WiFi e varias redes com o mesmo nome aparecem, seu celular ou notebook tende a se conectar ao sinal mais forte. O Ghost Predator cria um AP com o mesmo nome da rede real porem sem senha (aberto), e simultaneamente usa o Deauth Attack para derrubar o sinal da rede real. Com o sinal real fraco ou indisponivel, o dispositivo conecta no Evil Twin.
+
+> **Analogia**: E como abrir uma loja falsa com o mesmo nome e aparencia de uma loja famosa ao lado, fechar a original temporariamente, e quando o cliente entrar na sua, pedir para ele "confirmar o cartao" para entrar.
+
+#### Fluxo completo do ataque, etapa por etapa:
 
 ```
-Fase 1 - Deauth:
-[Ghost Predator] --deauth frames--> [Clientes da rede real]
-Resultado: clientes são desconectados e buscam reconexão
+Etapa 1 - Reconhecimento:
+  O Ghost Predator escaneia e identifica a rede-alvo (SSID, BSSID, canal, RSSI)
 
-Fase 2 - Clone AP:
-[Ghost Predator] --beacons "SSID_ALVO" (aberto)--> [Ar]
-Resultado: clientes veem a rede com o mesmo nome, sem senha, sinal forte
+Etapa 2 - Deautenticacao (derruba a rede real):
+  [Ghost Predator] ---pacotes deauth---> [Clientes da rede real]
+  Resultado: todos os celulares/notebooks sao expulsos da rede real
 
-Fase 3 - Conexão:
-[Cliente] --(conecta ao Evil Twin automaticamente)
+Etapa 3 - Clone AP (cria a rede falsa):
+  [Ghost Predator] emite beacons com o mesmo SSID da rede real, porem SEM senha
+  O Ghost Predator tem sinal forte (esta perto)
+  Resultado: os dispositivos veem a "mesma" rede disponivel e se conectam
 
-Fase 4 - Captive Portal:
-[Cliente] --qualquer HTTP--> [Ghost Predator] --redireciona--> [Portal falso]
-[Cliente] --(insere senha WiFi no portal)
-[Ghost Predator] --(captura e exibe a senha)
+Etapa 4 - Captura de DNS e HTTP:
+  O Ghost Predator rodas um servidor DNS que responde QUALQUER dominio com seu proprio IP
+  O servidor DHCP distribui o IP do Ghost Predator como gateway e DNS
+  Resultado: todo o trafego do dispositivo passa pelo Ghost Predator
+
+Etapa 5 - Portal Captive (pagina falsa):
+  Qualquer site que o usuario tente acessar e redirecionado para uma pagina falsa
+  A pagina pede a senha do WiFi para "reconectar" ou "verificar identidade"
+  Quando o usuario digita a senha, ela aparece no painel do Ghost Predator em tempo real
 ```
 
-**Como o redirecionamento funciona:**
-- O ESP32 roda um servidor **DNS** que responde qualquer consulta com seu próprio IP (192.168.4.1)
-- O servidor **DHCP** distribui o IP do ESP32 como gateway e DNS dos clientes
-- Qualquer requisição **HTTP** é interceptada e redirecionada para o portal captive
-- **HTTPS** não pode ser redirecionado (sem certificado válido) - apenas HTTP
+#### Por que so HTTP e capturado (nao HTTPS)?
 
-**Templates de portal captive:**
+Hoje a maioria dos sites usa HTTPS (o cadeado verde). O Ghost Predator nao tem como criar um certificado valido para esses sites, entao o navegador bloqueia o redirecionamento. Porem, o portal captive em si (a pagina falsa de senha) funciona porque o navegador carrega portais captives por HTTP antes de exibir qualquer aviso.
 
-| Template | Aparência | Texto |
-|----------|-----------|-------|
-| **WiFi Reconnect** | Genérico | "Sua conexão expirou, insira a senha para reconectar" |
-| **ISP/Provedor** | Imita provedor | "Atualização necessária - confirme suas credenciais" |
-| **Router Admin** | Interface de admin | "Acesso administrativo - autentique-se" |
+#### Templates de portal captive disponíveis:
 
-**Credenciais capturadas:**
-Exibidas no painel em tempo real com timestamp. Cada tentativa (correta ou não do ponto de vista do usuário) é salva.
+| Template | Aparencia | Mensagem exibida |
+|----------|-----------|-----------------|
+| **WiFi Reconnect** | Pagina generica de operadora | "Sessao expirada, reinsira a senha para continuar" |
+| **ISP/Provedor** | Imita pagina de provedor de internet | "Atualizacao de seguranca necessaria" |
+| **Router Admin** | Imita interface do roteador | "Acesso administrativo - autentique-se" |
+
+#### O que aparece no painel:
+- Credenciais digitadas pelo usuario em tempo real (com timestamp)
+- Cada tentativa e salva mesmo que o usuario erre a senha
 
 ---
 
-### Beacon Flood
+### Beacon Flood (Inundacao de Redes Falsas)
 
-Satura o espectro 802.11 com beacons de redes WiFi falsas.
+#### O que e?
 
-**Como funciona:**
-O firmware injeta beacon frames com SSIDs aleatórios (ou personalizados) em alta velocidade. Cada beacon é um frame de gerenciamento completo com todos os campos obrigatórios (Supported Rates IE, SSID IE, DS Parameter Set IE, etc.).
+O Beacon Flood cria centenas ou milhares de redes WiFi falsas ao mesmo tempo, enchendo a lista de WiFi de qualquer dispositivo proximo com redes que nao existem de verdade.
 
-**Efeitos:**
-- Enche a lista de redes WiFi de dispositivos próximos
-- Interfere em scanners e ferramentas de auditoria
-- Pode causar lentidão em drivers WiFi que processam muitos beacons
+#### Como funciona?
 
----
+Toda rede WiFi anuncia sua presenca continuamente enviando pacotes chamados **beacons** - e como um outdoor dizendo "estou aqui, me chamo X, use esta senha". O Ghost Predator injeta beacons fabricados com SSIDs aleatorios (ou de uma lista personalizada) em alta velocidade, sem precisar de um roteador real.
 
-### Karma Attack
+> **Analogia**: E como espalhar centenas de placas de "Vaga de emprego" falsas pela cidade - as vagas nao existem, mas as placas sao reais e confundem quem esta procurando.
 
-O Karma Attack faz o ESP32 responder a **qualquer probe request** se passando pela rede buscada.
+#### Efeitos praticos:
+- A lista de WiFi do celular fica cheia de redes inexistentes
+- Ferramentas de auditoria e scanners ficam sobrecarregadas processando tantos beacons
+- Pode causar lentidao em drivers WiFi de alguns dispositivos
+- Util para cobrir um ataque principal distraindo ferramentas de monitoramento
 
-**Fundamento:**
+#### Modos do Beacon Flood:
 
-Dispositivos WiFi buscam redes conhecidas enviando probe requests com o SSID da rede. Normalmente, apenas o AP real com aquele SSID responde. O Karma Attack intercepta essas buscas e responde como se fosse o AP buscado.
+| Opcao | O que faz |
+|-------|-----------|
+| **Channel Hop** | O Ghost Predator muda de canal automaticamente (1 a 13) para espalhar as redes falsas em todos os canais |
+| **Hidden Mode** | Emite beacons com SSID oculto (a rede aparece mas sem nome) |
+| **WPA3 Mode** | Inclui campos de seguranca WPA3 no beacon para enganar scanners avancados |
 
-**Fluxo:**
-```
-[Dispositivo] --(probe request: "MinhaRedeEmpresa")--> [Ar]
-[Ghost Predator] --(probe response: "MinhaRedeEmpresa")--> [Dispositivo]
-[Dispositivo] --(inicia conexão automática ao "Ghost Predator")
-[Ghost Predator] --(autentica e associa o cliente)
-[Dispositivo] --(qualquer HTTP redirecionado ao captive portal)
-```
+#### Por que cada SSID tem um MAC diferente?
 
-**Dispositivos vulneráveis:**
-Qualquer dispositivo com "Conexão automática" ativada para redes WiFi salvas. Isso inclui a maioria dos smartphones, notebooks e tablets por padrão.
-
-**Modo MANA (Advanced Karma):**
-O MANA é uma variante mais agressiva: além de responder a probe requests recebidos, o AP também transmite beacons com os SSIDs coletados de probes anteriores, aumentando a chance de capturar clientes que buscam redes específicas.
-
-**SSIDs conhecidos:**
-O painel acumula todos os SSIDs vistos em probe requests e exibe em tempo real. Esses SSIDs são usados pelo MANA para respostas mais direcionadas.
+O Ghost Predator usa um algoritmo de hash (FNV-1a) para gerar um MAC unico e deterministico para cada SSID. Isso faz com que cada rede falsa parecja vir de um roteador diferente, tornando o flood mais realista e dificil de filtrar.
 
 ---
 
-### Nuclear Auto-Attack
+### Karma Attack (Armadilha para Conexao Automatica)
 
-Executa todos os módulos ofensivos em paralelo para máximo impacto:
+#### O que e?
 
-| Fase | Módulo | Objetivo |
-|------|--------|----------|
-| 1 | Packet Sniffer (channel hopping) | Capturar EAPOL e PMKID de todas as redes |
-| 2 | Deauth Attack | Expulsar clientes de todas as redes WPA2 detectadas |
-| 3 | PMKID Fisher | Capturar PMKID de todos os APs WPA2 sem precisar de clientes |
-| 4 | Karma Attack | Responder a todos os probe requests recebidos |
+O Karma Attack explora o comportamento automatico dos dispositivos de tentar se reconectar a redes conhecidas. O Ghost Predator "ouve" quando um celular ou notebook pergunta "voce e a rede MinhaEmpresaWiFi?" e responde "sim, sou eu!" - mesmo nao sendo.
 
-O painel exibe o status de cada fase em tempo real com contadores de progresso e métricas acumuladas.
+#### Por que funciona?
+
+Quando voce conecta em uma rede WiFi e despois sai do alcance, seu dispositivo fica enviando mensagens no ar perguntando "MinhaRedeEmpresa esta por aqui?" (chamadas **probe requests**). Normalmente so o roteador real responde. O Karma Attack intercepta essas perguntas e responde se passando pelo roteador buscado, fazendo o dispositivo conectar automaticamente.
+
+> **Analogia**: E como alguem que fica na rua respondendo a qualquer pessoa que chame por um nome ("Joao, esta ai?") dizendo "Sim, sou eu!" - mesmo sem ser esse Joao.
+
+#### Passo a passo:
+
+```
+1. Seu celular (com WiFi ligado) envia no ar: "MinhaRedeEmpresa esta por aqui?"
+   (isso acontece constantemente em segundo plano, sem voce ver)
+
+2. O Ghost Predator esta em modo monitor e ouve essa pergunta
+
+3. O Ghost Predator responde imediatamente: "Sim! Sou a MinhaRedeEmpresa, conecte-se!"
+
+4. Seu celular aceita e inicia a conexao automaticamente
+   (sem voce precisar fazer nada - e automatico)
+
+5. Seu celular esta agora conectado ao Ghost Predator
+   Todo o trafego HTTP passa por ele e pode ser redirecionado ao portal captive
+```
+
+#### Quem e vulneravel?
+
+**Praticamente qualquer dispositivo** com WiFi ligado e "Conexao automatica" ativada (que e o padrao em todos os sistemas operacionais):
+- Smartphones Android e iPhone
+- Notebooks Windows, macOS e Linux
+- Tablets, smart TVs, cameras IP, impressoras WiFi
+- Qualquer dispositivo IoT que ja conectou em uma rede antes
+
+#### Modo MANA (Karma Avancado):
+
+O MANA e uma variante mais agressiva do Karma:
+- **Karma padrao**: so responde quando recebe uma probe request
+- **MANA**: alem de responder, tambem emite beacons ativos com todos os SSIDs que ja viu em probes anteriores
+
+Isso aumenta muito a chance de capturar dispositivos que nao estao enviando probes ativamente no momento.
+
+#### O painel mostra:
+- Lista em tempo real de todos os SSIDs que dispositivos proximos estao buscando
+- Clientes que se conectaram ao Karma
+- Credenciais capturadas pelo portal captive integrado
 
 ---
 
-### Auto-Attack / Wifite Mode
+### Reconnect Blocker (Bloqueador de Reconexao)
 
-Ataque automático sequencial inspirado no Wifite (ferramenta Linux): para cada rede WPA2 detectada no scan, executa automaticamente a seguinte sequência:
+#### O que e?
+
+O Reconnect Blocker e uma tecnica complementar ao Deauth que impede um dispositivo de se reconectar a rede real mesmo depois do ataque deauth. E um "bloqueio persistente" de reconexao.
+
+#### Como funciona?
+
+Quando um celular e deautenticado, ele tenta se reconectar enviando **probe requests** (perguntando "MinhaRede, esta ai?"). Normalmente o roteador real responde e a reconexao ocorre. O Reconnect Blocker intercepta essas probes e envia uma resposta falsa com o SSID real mas um MAC (BSSID) diferente do roteador verdadeiro - causando falha na reconexao.
 
 ```
-Para cada rede WPA2 encontrada:
-  ┌─ Fase 1: PMKID Fisher (timeout configurável, padrão: 30s)
-  │    Captura PMKID via Auth+Assoc forçados
-  │    Se capturou: marca "PMKID" e passa para próxima rede
-  │
-  ├─ Fase 2: Deauth + Captura de Handshake (timeout: 60s)
-  │    Deauth expulsa clientes, sniffer captura reconexão
-  │    Se capturou: marca "HS" e passa para próxima rede
-  │
-  └─ Fase 3: Evil Twin (timeout: 120s)
-       Clone AP + Deauth + Portal Captive
-       Captura senha diretamente do usuário
+Celular: "MinhaRede, voce esta aqui?"
+Ghost Predator: "Sim! [responde com SSID correto mas MAC errado]"
+Celular: tenta conectar com o MAC errado -> falha
+Resultado: o celular fica em loop tentando reconectar e nunca consegue
 ```
 
-**Parâmetros configuráveis:**
-- **RSSI mínimo**: ignora redes muito distantes (padrão: -75 dBm)
-- **Timeout PMKID**: tempo máximo na fase PMKID (padrão: 30s)
-- **Timeout Deauth+HS**: tempo máximo aguardando handshake (padrão: 60s)
-
-**Tabela de progresso:**
-Mostra todas as redes com colunas de status para cada fase (aguardando / em execução / coletado). Atualiza em tempo real.
+#### Quando usar:
+- Em conjunto com Evil Twin: impede o dispositivo de voltar para a rede real enquanto o ataque continua
+- Para manter um dispositivo desconectado por mais tempo que o Deauth simples permitiria
 
 ---
 
-### LED Panel Attack
+### Nuclear Auto-Attack (Ataque Total Simultaneo)
 
-Detecta e ataca controladores de LED/iluminação inteligente que usam protocolos WiFi sem criptografia.
+#### O que e?
 
-**Protocolos suportados:**
+O Nuclear e o modo mais agressivo: ativa todos os modulos de ataque ao mesmo tempo, em paralelo, para capturar o maximo de informacoes possivel de todas as redes no alcance simultaneamente.
 
-| Protocolo | Porta UDP | Fabricantes |
-|-----------|-----------|-------------|
-| **CL (Color Light)** | 9980 | Controladores genéricos chineses |
-| **WLED** | 5005 | Plataforma open source WLED |
+#### O que acontece quando voce ativa:
 
-**Modos de ataque:**
+| Fase | Modulo ativo | O que captura |
+|------|-------------|---------------|
+| 1 | Packet Sniffer com channel hopping | EAPOL handshakes e PMKIDs de todas as redes ao redor |
+| 2 | Deauth Attack | Expulsa clientes de todas as redes WPA2 detectadas (forcando reconexao e handshake) |
+| 3 | PMKID Fisher | Tenta capturar o PMKID de cada AP sem precisar esperar por clientes |
+| 4 | Karma Attack | Captura dispositivos que tentam reconectar a redes conhecidas |
 
-| Modo | Descrição |
+#### Resultado esperado:
+
+Em poucos minutos em um ambiente com varias redes WiFi, o Nuclear pode coletar:
+- Handshakes WPA2 de multiplas redes (para cracking offline)
+- PMKIDs de todos os APs acessiveis
+- Dispositivos conectados ao Karma prontos para o portal captive
+
+O painel exibe o progresso de cada fase em tempo real com contadores acumulados.
+
+> **Quando usar**: Em auditorias onde voce quer um panorama completo de todas as vulnerabilidades do ambiente sem precisar atacar rede por rede manualmente.
+
+---
+
+### Auto-Attack / Wifite Mode (Ataque Automatico Sequencial)
+
+#### O que e?
+
+O Wifite Mode automatiza o processo de auditoria rede por rede. Inspirado na ferramenta Wifite do Linux, ele pega a lista de redes escaneadas e tenta capturar a senha de cada uma usando tres tecnicas em sequencia, passando para a proxima rede quando uma tecnica falha ou tem sucesso.
+
+#### Como funciona - fluxo completo:
+
+```
+O Ghost Predator escaneia todas as redes WiFi proximas
+Para CADA rede WPA2 encontrada, executa esta sequencia:
+
+  TENTATIVA 1 - PMKID Fisher (padrao: 30 segundos)
+  ├── Tenta capturar o PMKID do roteador sem precisar de cliente conectado
+  ├── Se capturou o PMKID: salva e passa para a PROXIMA rede
+  └── Se nao capturou em 30s: vai para tentativa 2
+
+  TENTATIVA 2 - Deauth + Handshake (padrao: 60 segundos)
+  ├── Envia deauth para expulsar clientes da rede
+  ├── Aguarda o cliente se reconectar e captura o handshake WPA2
+  ├── Se capturou o handshake: salva e passa para a PROXIMA rede
+  └── Se nao capturou em 60s (ex: nao tinha ninguem conectado): vai para tentativa 3
+
+  TENTATIVA 3 - Evil Twin (padrao: 120 segundos)
+  ├── Clona a rede, deruba o AP real, exibe portal captive
+  ├── Aguarda o usuario digitar a senha no portal
+  ├── Se capturou a senha: salva e passa para a PROXIMA rede
+  └── Se nao capturou em 120s: marca como "falhou" e passa para a proxima
+```
+
+#### Configuracoes:
+
+- **RSSI minimo**: ignora redes muito distantes ou com sinal fraco (padrao: -75 dBm). Evita perder tempo em redes que o sinal mal chega.
+- **Timeout PMKID**: quanto tempo tentar capturar o PMKID antes de desistir
+- **Timeout Deauth+HS**: quanto tempo aguardar um cliente se reconectar
+
+#### Tabela de progresso no painel:
+
+Mostra cada rede com seu status em cada fase:
+
+| Rede | PMKID | Handshake | Evil Twin |
+|------|-------|-----------|-----------|
+| MinhaRede_Casa | Capturado | - | - |
+| WiFi_Vizinho | Falhou | Capturado | - |
+| RedeEmpresa | Falhou | Falhou | Em andamento |
+
+---
+
+### LED Panel Attack (Ataque a Controladores de Iluminacao)
+
+#### O que e?
+
+Muitos controladores de LED RGB e iluminacao inteligente (aqueles strips de LED coloridos baratos) usam protocolos WiFi sem nenhuma autenticacao ou criptografia. O LED Panel Attack detecta e explora esses dispositivos.
+
+#### Por que eles sao vulneraveis?
+
+Fabricantes de produtos de iluminacao barata priorizaram custo e facilidade de configuracao sobre seguranca. Os protocolos usados enviam comandos em texto puro via UDP, sem senha, sem criptografia - qualquer dispositivo na mesma rede pode controlar as luzes.
+
+#### Protocolos detectados:
+
+| Protocolo | Porta | Quem usa |
+|-----------|-------|----------|
+| **CL (Color Light)** | UDP 9980 | Controladores genericos chineses (strips baratas) |
+| **WLED** | UDP 5005 | Plataforma open source WLED (muito popular em projetos DIY) |
+
+#### Modos de ataque:
+
+| Modo | O que faz |
 |------|-----------|
-| **Deauth** | Desconecta o controlador LED de sua rede WiFi |
-| **Flood** | Inunda com pacotes UDP inválidos (instabilidade) |
-| **Disrupt** | Envia comandos malformados causando comportamento inesperado |
+| **Deauth** | Desconecta o controlador LED da sua rede WiFi (as luzes podem piscar ou apagar) |
+| **Flood** | Envia rafaga de pacotes UDP invalidos causando instabilidade ou travamento |
+| **Disrupt** | Envia comandos malformados que causam comportamento inesperado nas luzes |
 
 ---
 
