@@ -90,9 +90,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 .topbar-sep{width:1px;height:20px;background:var(--border2)}
 #atk-badges{display:flex;gap:5px;align-items:center}
 .atk-badge{display:flex;align-items:center;gap:3px;font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid var(--border);color:var(--muted);background:transparent;transition:.2s;letter-spacing:.05em;text-transform:uppercase}
-.atk-badge.active{color:var(--green);border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.08);box-shadow:0 0 8px rgba(34,197,94,.2)}
-.atk-badge.active-warn{color:var(--yellow);border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.08);box-shadow:0 0 8px rgba(245,158,11,.2)}
+.atk-badge.active{color:var(--green);border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.08);box-shadow:0 0 8px rgba(34,197,94,.2);animation:badge-pulse 1.8s ease-in-out infinite}
+.atk-badge.active-warn{color:var(--yellow);border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.08);box-shadow:0 0 8px rgba(245,158,11,.2);animation:badge-pulse-warn 1.8s ease-in-out infinite}
 .atk-badge i{font-size:.55rem}
+@keyframes badge-pulse{0%,100%{box-shadow:0 0 6px rgba(34,197,94,.2)}50%{box-shadow:0 0 14px rgba(34,197,94,.55)}}
+@keyframes badge-pulse-warn{0%,100%{box-shadow:0 0 6px rgba(245,158,11,.2)}50%{box-shadow:0 0 14px rgba(245,158,11,.55)}}
 #topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
 .sys-chip{font-size:.62rem;color:var(--muted2);background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-family:var(--font-mono);letter-spacing:.03em;transition:color .2s}
 .sys-chip:hover{color:var(--text)}
@@ -199,6 +201,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 .tbl .mono{font-family:var(--font-mono);font-size:.68rem}
 .rssi-pill{display:inline-flex;align-items:center;gap:4px}
 .rssi-bar{display:inline-block;height:6px;background:var(--green);border-radius:2px;min-width:2px}
+.sig-bars{display:inline-flex;align-items:flex-end;gap:2px;height:14px;vertical-align:middle}
+.sig-bars span{display:inline-block;width:4px;border-radius:1px;background:var(--border2)}
+.sig-bars span.on{background:var(--sigcol,var(--green))}
 
 /* ── CONSOLE ──────────────────────────────────────────────────────────────*/
 #con-head{background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -281,7 +286,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <span class="login-badge">v3.8 &nbsp;·&nbsp; ESP32</span>
+      <span class="login-badge">v4.1 &nbsp;·&nbsp; ESP32</span>
       <i class="fa-solid fa-ghost ghost-icon"></i>
       <h1>Ghost <span>Predator</span> Mobile</h1>
       <p>Wireless Security Assessment Platform</p>
@@ -407,6 +412,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
   <div class="qa-card">
     <div class="qa-title"><i class="fa-solid fa-crosshairs"></i> Quick Attack</div>
     <div class="qa-desc">Selecione um AP na tabela abaixo e clique em <b>Attack</b> para iniciar Deauth + Auto-Capture do handshake WPA2 em um clique.</div>
+    <div id="qa-target-row" style="display:none;margin:8px 0 4px;padding:7px 10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.3);border-radius:7px;font-size:.75rem;display:flex;align-items:center;gap:10px">
+      <i class="fa-solid fa-crosshairs" style="color:var(--red)"></i>
+      <span style="color:var(--muted)">Alvo:</span>
+      <b id="qa-target-ssid" style="color:var(--text)">—</b>
+      <span class="mono" id="qa-target-bssid" style="color:var(--muted);font-size:.65rem"></span>
+      <span id="qa-target-ch" style="color:var(--muted);font-size:.65rem"></span>
+    </div>
     <div class="btns">
       <button class="btn btn-primary" onclick="wifiScan()"><i class="fa-solid fa-magnifying-glass"></i> Escanear</button>
       <button class="btn btn-ghost" id="btn-autoscan" onclick="toggleAutoScan()"><i class="fa-solid fa-rotate"></i> Auto-Scan</button>
@@ -570,7 +582,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 <div class="page" id="page-deauth">
   <div id="deauth-bar" class="atk-bar" style="display:none">
     <i class="fa-solid fa-bolt"></i>
-    <span>Deauth ativo &nbsp;|&nbsp; <b id="df-count">0</b> frames enviados</span>
+    <span>Deauth ativo &nbsp;|&nbsp; <b id="df-count">0</b> frames &nbsp;·&nbsp; <b id="df-fps">—</b> f/s</span>
     <button class="btn btn-ghost" style="margin-left:auto;padding:3px 10px;font-size:.7rem" onclick="apiPost('/api/deauth/stop')"><i class="fa-solid fa-stop"></i> Parar</button>
   </div>
   <div class="card">
@@ -616,6 +628,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       <button class="btn btn-ghost" onclick="fillFromSel()"><i class="fa-solid fa-crosshairs"></i> Usar AP Selecionado</button>
     </div>
     <div class="info-box warn" style="margin-top:12px">16 reason codes em ambas direções + disassoc + null frames (power-save) + SA Query (PMF bypass) + auth flood. Sequence counter incremental.</div>
+    <div id="deauth-live-stats" style="display:none;margin-top:10px;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid rgba(239,68,68,.3);gap:18px;align-items:center">
+      <span style="font-size:.7rem;color:var(--muted)">AO VIVO</span>
+      <span style="font-size:.85rem"><b id="dls-frames" style="color:var(--red);font-family:var(--font-mono)">0</b> <span style="color:var(--muted);font-size:.65rem">frames</span></span>
+      <span style="font-size:.85rem"><b id="dls-fps" style="color:var(--orange);font-family:var(--font-mono)">—</b> <span style="color:var(--muted);font-size:.65rem">f/s</span></span>
+    </div>
   </div>
   <!-- Target Manager -->
   <div class="card">
@@ -1205,6 +1222,7 @@ Oi_Fibra</textarea>
 const TOAST_DUR = 5000;
 let targets = JSON.parse(localStorage.getItem('gpm_targets') || '[]');
 let lastStatus = {};
+let _dfPrev = null;
 
 // ── SOUND TOGGLE ─────────────────────────────────────────────────────────────
 let _soundMuted = false;
@@ -1468,9 +1486,9 @@ function applyStatus(s) {
 
   setText('ss-aps', s.aps||0);
   setText('ss-cli', s.clients||0);
-  setText('ss-hs', s.handshakes||0);
-  setText('ss-pm', s.pmkids||0);
-  setText('ss-cr', s.creds||0);
+  _setStatColored('ss-hs', s.handshakes||0, 1, 'var(--cyan)');
+  _setStatColored('ss-pm', s.pmkids||0,     1, 'var(--green)');
+  _setStatColored('ss-cr', s.creds||0,       1, 'var(--red)');
   setText('ss-ble', s.bledevs||0);
 
   showCount('sc-pkts', s.packets, s.packets > 0);
@@ -1479,9 +1497,26 @@ function applyStatus(s) {
 
   if (s.deauth) {
     document.getElementById('deauth-bar').style.display = 'flex';
-    setText('df-count', s.deauth_frames || 0);
+    const dlsEl = document.getElementById('deauth-live-stats');
+    if (dlsEl) dlsEl.style.display = 'flex';
+    const frames = s.deauth_frames || 0;
+    setText('df-count', frames);
+    setText('dls-frames', frames);
+    const now = Date.now();
+    if (!_dfPrev) _dfPrev = { frames, ts: now };
+    const dt = (now - _dfPrev.ts) / 1000;
+    if (dt >= 0.8) {
+      const fps = Math.round((frames - _dfPrev.frames) / dt);
+      const fpsStr = fps > 0 ? fps : '—';
+      setText('df-fps', fpsStr);
+      setText('dls-fps', fpsStr);
+      _dfPrev = { frames, ts: now };
+    }
   } else {
     document.getElementById('deauth-bar').style.display = 'none';
+    const dlsEl = document.getElementById('deauth-live-stats');
+    if (dlsEl) dlsEl.style.display = 'none';
+    _dfPrev = null;
   }
 
   setText('fisher-att', s.fisher_attempts||0);
@@ -1526,6 +1561,11 @@ function setBadge(id, on, warn=false) {
   el.classList.toggle('active-warn', !!on && warn);
 }
 function setText(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
+function _setStatColored(id, v, threshold, col) {
+  const el = document.getElementById(id); if(!el) return;
+  el.textContent = v;
+  el.style.color = v >= threshold ? col : '';
+}
 function showCount(id, v, show) {
   const el=document.getElementById(id); if(!el) return;
   el.style.display = show ? '' : 'none'; el.textContent = v;
@@ -1661,6 +1701,11 @@ function rssiToQuality(rssi) {
   if (!rssi) return 0;
   return Math.max(0, Math.min(100, Math.round((rssi + 90) / 60 * 100)));
 }
+function sigBars(qual, col) {
+  const n = qual >= 80 ? 5 : qual >= 60 ? 4 : qual >= 40 ? 3 : qual >= 20 ? 2 : qual > 0 ? 1 : 0;
+  const heights = [4,6,8,11,14];
+  return `<span class="sig-bars" style="--sigcol:${col}">${heights.map((h,i)=>`<span style="height:${h}px" class="${i<n?'on':''}"></span>`).join('')}</span> `;
+}
 
 function rssiToDistance(rssi) {
   if (!rssi) return '?';
@@ -1715,7 +1760,7 @@ function renderAPTable(data) {
       <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b>${hiddenBadge}${wpsBadge}</td>
       <td class="mono" style="font-size:.7rem">${ap.bssid} <button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem" title="Copiar BSSID" onclick="navigator.clipboard.writeText('${ap.bssid}');showToast('BSSID copiado')"><i class="fa-solid fa-copy"></i></button></td>
       <td style="text-align:center">${ap.channel}</td>
-      <td><div class="rssi-pill"><div class="rssi-bar" style="width:${qual/3}px;background:${rssiColor}"></div><span style="color:${rssiColor}">${ap.rssi}dBm</span></div></td>
+      <td><div class="rssi-pill">${sigBars(qual,rssiColor)}<span style="color:${rssiColor};font-size:.72rem">${ap.rssi}dBm</span></div></td>
       <td style="font-size:.7rem;color:var(--cyan)">${dist} <span style="font-size:.6rem;color:var(--muted)">(${qual}%)</span></td>
       <td style="font-size:.65rem;color:var(--muted)">${vendor}</td>
       <td><span class="badge ${authBadge}">${auth}</span></td>
@@ -1770,11 +1815,19 @@ async function wifiScan() {
 function buildChMap(counts) {
   const el = document.getElementById('ch-map');
   el.innerHTML = '';
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
   const max = Math.max(1, ...Object.values(counts));
   for (let ch=1; ch<=13; ch++) {
     const n = counts[ch]||0;
-    const h = Math.max(2, Math.round((n/max)*40));
-    el.innerHTML += `<div class="ch-col"><div class="ch-bar" style="height:${h}px;opacity:${n?1:.2}"></div><div class="ch-lbl">${ch}</div></div>`;
+    const h = Math.max(2, Math.round((n/max)*44));
+    const pct = total > 0 ? Math.round(n/total*100) : 0;
+    const busy = n >= Math.ceil(max * 0.6);
+    const col = busy ? 'var(--red)' : n > 0 ? 'var(--accent2)' : '';
+    el.innerHTML += `<div class="ch-col" title="Canal ${ch}: ${n} rede(s)${pct?', '+pct+'% do total':''}">
+      <div class="ch-bar" style="height:${h}px;opacity:${n?1:.15}${col?';background:'+col:''}"></div>
+      ${n>0?`<div style="font-size:.55rem;color:${busy?'var(--red)':'var(--muted)'};margin-bottom:1px">${n}</div>`:'<div style="height:10px"></div>'}
+      <div class="ch-lbl" style="color:${busy?'var(--red)':''}">${ch}</div>
+    </div>`;
   }
 }
 
@@ -1785,6 +1838,13 @@ function selectAP(ssid, bssid, channel) {
   document.getElementById('d-ch').value = channel;
   document.getElementById('et-ssid').value = ssid;
   document.getElementById('et-ch').value = channel;
+  const row = document.getElementById('qa-target-row');
+  if (row) {
+    row.style.display = 'flex';
+    setText('qa-target-ssid', ssid || '(hidden)');
+    setText('qa-target-bssid', bssid);
+    setText('qa-target-ch', 'CH' + channel);
+  }
   toast('grn','fa-crosshairs','Alvo: ' + (ssid||bssid) + ' ch' + channel);
 }
 function quickAttack(bssid, channel) {
