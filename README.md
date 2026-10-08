@@ -1182,31 +1182,6 @@ setInterval(pollStatus, 1000);
 
 ---
 
-## Screenshots
-
-### Scanner WiFi
-![Scanner WiFi](docs/screenshots/scanner.png)
-
-### Packet Sniffer
-![Packet Sniffer](docs/screenshots/sniffer.png)
-
-### Deauth Attack
-![Deauth Attack](docs/screenshots/deauth.png)
-
-### Evil Twin + Captive Portal
-![Evil Twin](docs/screenshots/eviltwin.png)
-
-### Auto-Attack (Wifite Mode)
-![Auto-Attack](docs/screenshots/wifite.png)
-
-### Info Sistema
-![Info Sistema](docs/screenshots/sysinfo.png)
-
-### Karma Attack
-![Karma](docs/screenshots/karma.png)
-
----
-
 ## Aviso Legal
 
 Esta ferramenta destina-se **exclusivamente** a fins educacionais e testes de segurança em redes próprias ou com autorização explícita e documentada do responsável pela rede.
@@ -1226,4 +1201,4 @@ MIT - veja [LICENSE](LICENSE)
 
 ---
 
-*Ghost Predator Mobile v4.3 - ESP32 Wireless Security Assessment Platform*
+*Ghost Predator Mobile v4.6 - ESP32 Wireless Security Assessment Platform*
