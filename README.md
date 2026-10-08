@@ -2,7 +2,7 @@
 
 > Plataforma portátil de avaliação de segurança WiFi e Bluetooth, rodando diretamente no ESP32 com interface web SPA acessível pelo celular ou notebook. Sem software adicional, sem sistema operacional especial - basta conectar e usar.
 
-**Versão atual: v4.3** | [Instalação](#instalação) | [Como Usar](#como-usar) | [Ataques](#módulos-de-ataque) | [Arquitetura](#arquitetura-técnica)
+**Versão atual: v4.6** | [Instalação](#instalação) | [Como Usar](#como-usar) | [Ataques](#módulos-de-ataque) | [Arquitetura](#arquitetura-técnica)
 
 ---
 
@@ -149,7 +149,11 @@ O **ESP32-S3 WROOM-1 N16R8** (disponivel na Shopee por R$13-27) e o hardware ide
   LEDs: PWR, TX, RX
 ```
 
-![Diagrama ESP32-S3 N16R8](docs/hardware/esp32-s3-n16r8/02-diagrama-componentes.jpg)
+![Pinout ESP32-S3 N16R8](docs/hardware/esp32-s3-n16r8/01-pinout.jpg)
+
+| Componentes | Dimensoes |
+|---|---|
+| ![Componentes](docs/hardware/esp32-s3-n16r8/02-diagrama-componentes.jpg) | ![Dimensoes](docs/hardware/esp32-s3-n16r8/03-dimensoes-n16r8.jpg) |
 
 ### Flashando no ESP32-S3 N16R8
 
