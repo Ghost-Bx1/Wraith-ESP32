@@ -91,24 +91,242 @@ A comunicação entre o navegador e o ESP32 usa:
 
 ## Hardware Suportado
 
-| Chip | Board Recomendada | Observações |
-|------|-------------------|-------------|
-| **ESP32-D0WD-V3** | DevKit v1 / WROOM-32 | Recomendado - testado e validado |
-| **ESP32-S3** | DevKitC-1 | Suportado - mais RAM e USB OTG nativo |
-| **ESP32-C3** | DevKitM-1 | Suportado - arquitetura RISC-V, sem BT Classic |
+| Chip | Board | Flash | RAM | Observações |
+|------|-------|-------|-----|-------------|
+| **ESP32-D0WD-V3** | DevKit v1 / WROOM-32 | 4MB | 520KB SRAM | Testado e validado, hardware base |
+| **ESP32-S3 N16R8** | WROOM-1 N16R8 44Pin | **16MB** | **8MB PSRAM** | **Hardware recomendado** - superior em tudo |
+| **ESP32-S3** | DevKitC-1 | 4MB | 512KB SRAM | Suportado - USB OTG nativo |
+| **ESP32-C3** | DevKitM-1 | 4MB | 400KB SRAM | Suportado - RISC-V, sem BT Classic |
+
+### ESP32-S3 N16R8 - Hardware Recomendado
+
+O **ESP32-S3 WROOM-1 N16R8** (disponivel na Shopee por R$13-27) e o hardware ideal para o Ghost Predator Mobile:
+
+| | ESP32 D0WD-V3 (base) | ESP32-S3 N16R8 (recomendado) |
+|---|---|---|
+| **CPU** | Xtensa LX6 Dual Core 240MHz | **Xtensa LX7 Dual Core 240MHz** |
+| **Flash** | 4MB | **16MB** (4x mais) |
+| **SRAM** | 520KB | **512KB + 16KB RTC SRAM** |
+| **PSRAM** | - | **8MB OPI PSRAM** |
+| **RAM Total** | 520KB | **~8.5MB efetivo** |
+| **GPIOs** | 34 | **45 GPIOs** |
+| **ADC** | 2x 12-bit | **2x 12-bit (ate 20 canais)** |
+| **USB** | Via CH340 (UART) | **USB OTG nativo** + CH343P serial |
+| **I2C** | 2x | 2x |
+| **SPI** | 4x | 4x |
+| **I2S** | 2x | 2x |
+| **RGB LED** | - | **WS2812 integrado** |
+| **BLE** | 4.2 | **5.0** (maior alcance BLE Spam) |
+| **Seguranca** | AES, SHA | **AES, SHA, RSA, ECC, RNG + Secure Boot** |
+| **Temperatura** | -40 a 85°C | -40 a 65°C |
+| **Particoes** | huge_app.csv (3MB app) | **partitions_16mb.csv (5MB app + 6MB LittleFS)** |
+
+**Por que 16MB + 8MB PSRAM muda tudo:**
+- Interface web pode ter mais features sem comprimir
+- Buffer de captura de pacotes muito maior em RAM (8MB vs 520KB)
+- Logs de captura maiores armazenados diretamente no dispositivo
+- Possibilidade de armazenar wordlists pequenas no LittleFS (6MB disponivel)
+- CPU LX7 e ~37% mais rapida que LX6 por clock cycle
+- Secure Boot e Flash Encryption nativos para proteger o firmware
+
+**Componentes da placa:**
+
+```
+[ESP32-S3 N16R8 - 44 pinos, 57.15mm x 27.94mm]
+
+  Lado esquerdo:              Lado direito:
+  3.3V, 3.3V, RST             GND, TX, RX
+  GPIO 4,5,6,7,15,16          GPIO 1,2,42,41,40,39
+  GPIO 17,18,8,3,46           GPIO 38,37,36,35,0
+  GPIO 9,10,11,12,13,14       GPIO 45,48,47,21,20,19
+  5V                          GND, GND
+
+  Modulo: ESP32-S3-WROOM-1-N16R8
+  RGB LED: WS2812 (GPIO 48)
+  USB OTG: USB-C esquerda (native USB)
+  USB Serial: USB-C direita (CH343P)
+  Botoes: RST (GPIO 38), BOOT (GPIO 0)
+  LEDs: PWR, TX, RX
+```
+
+![Diagrama ESP32-S3 N16R8](docs/hardware/esp32-s3-n16r8/02-diagrama-componentes.jpg)
+
+### Flashando no ESP32-S3 N16R8
+
+```bash
+# Upload firmware para N16R8 (usa partitions_16mb.csv automaticamente)
+pio run --target upload -e esp32-s3-n16r8
+
+# Upload filesystem LittleFS
+pio run --target uploadfs -e esp32-s3-n16r8
+```
+
+**Porta USB:** Use sempre a porta **USB OTG (esquerda)** para programar o N16R8, ou a **USB Serial (direita)** com CH343P - ambas funcionam.
+
+**Modo bootloader manual** (se necessario):
+1. Segure o botao **BOOT**
+2. Pressione **RST** rapidamente
+3. Solte **BOOT**
+4. Execute o upload
 
 ### Requisitos de Hardware
 
-- **RAM**: mínimo 4MB (ESP32 padrão tem 520KB SRAM + PSRAM opcional)
-- **Flash**: mínimo 4MB (firmware ~1.6MB + LittleFS para interface)
+- **RAM**: minimo 4MB Flash (recomendado 16MB para N16R8)
 - **Antena**: antena externa recomendada para maior alcance de captura
 
-### Alimentação
+### Alimentacao
 
 O ESP32 pode ser alimentado via:
-- USB (5V do cabo - ideal para uso com celular via OTG)
-- Bateria LiPo 3.7V com regulador de tensão
-- Power bank USB (uso portátil)
+- USB-C (5V do cabo - ideal para uso com celular via OTG)
+- Bateria LiPo 3.7V com regulador de tensao
+- Power bank USB (uso portatil)
+
+---
+
+## Modulos WiFi Externos
+
+O Ghost Predator Mobile usa o radio WiFi integrado do ESP32. Para cenarios avancados, e possivel adicionar modulos WiFi externos.
+
+### Via USB OTG (ESP32-S3)
+
+O ESP32-S3 possui USB OTG nativo, permitindo conectar adaptadores WiFi USB:
+
+```
+[ESP32-S3] <--USB OTG--> [Adaptador WiFi USB]
+                              (RT8720, RTL8188)
+```
+
+**Hardware necessario:**
+- Adaptador USB WiFi com chipset suportado por Linux (RT8720DN, RTL8188EUS)
+- Cabo OTG USB-C para USB-A
+- Biblioteca USB Host para ESP32-S3
+
+**Limitacoes:** O ESP32 nao roda Linux, entao o driver do adaptador WiFi precisa ser portado para bare-metal. Projeto complexo, recomendado apenas para desenvolvedores avancados.
+
+**Alternativa pratica:** Use o radio WiFi interno para captura e um segundo ESP32 como repeater/bridge.
+
+### Via GPIO/SPI - Modulo ESP8266
+
+A forma mais simples de ter um segundo radio WiFi e conectar um **ESP8266** via UART:
+
+```
+[ESP32]                    [ESP8266]
+GPIO17 (TX) -----------> RX
+GPIO16 (RX) <----------- TX
+GND -------------------- GND
+3.3V ------------------- VCC (max 500mA)
+```
+
+**Configuracao no ESP8266:**
+- Flash com firmware AT (Espressif AT firmware)
+- ESP32 controla o ESP8266 via comandos AT pela UART
+
+**Casos de uso:**
+- ESP32 faz o AP principal + captura
+- ESP8266 faz deauth em um canal diferente simultaneamente
+- Aumenta cobertura geografica dos ataques
+
+### Via SPI - Modulo W5500 (Ethernet)
+
+Para conectar o dispositivo a uma rede cabeada:
+
+```
+[ESP32]       [W5500]
+GPIO18 ------> SCK
+GPIO23 ------> MOSI
+GPIO19 <------ MISO
+GPIO5  ------> CS
+3.3V  ------> VCC
+GND   ------> GND
+```
+
+### Via UART - Modulo SIM800L (4G/LTE)
+
+Para acesso remoto via rede celular:
+
+```
+[ESP32]               [SIM800L / SIM7600]
+GPIO17 (TX) --------> RX
+GPIO16 (RX) <-------- TX
+GND ----------------> GND
+4V (externo) -------> VCC (4.0V, NÃO 3.3V!)
+```
+
+**Uso:** O modulo 4G permite acesso remoto ao painel do Ghost Predator via internet, sem precisar de WiFi local.
+
+---
+
+## Expandindo a Memoria do ESP32
+
+### Trocar para ESP32-S3 N16R8 (mais simples)
+
+A forma mais facil de ter mais memoria e simplesmente usar o **ESP32-S3 N16R8** em vez do ESP32 original. Sem soldagem, sem risco, com 4x mais Flash e 16x mais RAM efetiva.
+
+### PSRAM Externa via SPI (ESP32 original)
+
+O ESP32-D0WD suporta PSRAM externa via SPI. Alguns modulos WROVER ja vem com 4MB de PSRAM soldada:
+
+- **ESP32-WROVER-B**: 4MB PSRAM (SPIRAM)
+- **ESP32-WROVER-E**: 4MB PSRAM + antena externa
+
+Para habilitar no `platformio.ini`:
+```ini
+build_flags =
+    -DBOARD_HAS_PSRAM=1
+    -mfix-esp32-psram-cache-issue
+```
+
+No codigo:
+```cpp
+#include "esp_heap_caps.h"
+
+// Alocar no PSRAM
+void* buf = heap_caps_malloc(1024*1024, MALLOC_CAP_SPIRAM);
+
+// Verificar PSRAM disponivel
+size_t psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+Serial.printf("PSRAM livre: %d bytes\n", psram);
+```
+
+### Flash Externa Adicional (avancado)
+
+E possivel conectar chips Flash SPI extras ao ESP32 para armazenamento adicional de dados (nao de codigo):
+
+```
+[ESP32]       [W25Q128 - 16MB Flash SPI]
+GPIO18 ------> CLK
+GPIO23 ------> MOSI (DI)
+GPIO19 <------ MISO (DO)
+GPIO22 ------> CS
+3.3V  ------> VCC
+GND   ------> GND
+```
+
+Use a biblioteca `SPIFlash` para ler/gravar:
+```cpp
+#include <SPIFlash.h>
+
+SPIFlash flash(22); // CS pin
+
+void setup() {
+    flash.begin();
+    flash.writeStr(0, "Ghost Predator Data");
+}
+```
+
+**Casos de uso:**
+- Armazenar handshakes capturados (sem limite do LittleFS principal)
+- Wordlists para ataque offline
+- Logs de longa duracao
+
+### Resumo de Capacidades por Hardware
+
+| Hardware | Flash Total | RAM Total | Custo Aprox. | Recomendado Para |
+|---|---|---|---|---|
+| ESP32 D0WD-V3 | 4MB | 520KB | R$10-20 | Inicio rapido, testes |
+| ESP32-WROVER-B | 4MB | 4.5MB | R$20-35 | Mais RAM sem trocar placa |
+| ESP32-S3 N16R8 | **16MB** | **8.5MB** | R$13-27 | **Uso sério, producao** |
+| ESP32-S3 + Flash ext. | 16MB + 16MB | 8.5MB | R$30-50 | Armazenamento massivo |
 
 ---
 
@@ -133,7 +351,10 @@ cd Ghost-Raptor-Mobile-ESP32
 # ESP32 padrão (WROOM-32, DevKit v1)
 pio run --target upload -e esp32dev
 
-# ESP32-S3
+# ESP32-S3 N16R8 - 16MB Flash + 8MB PSRAM (RECOMENDADO)
+pio run --target upload -e esp32-s3-n16r8
+
+# ESP32-S3 generico (4MB Flash)
 pio run --target upload -e esp32-s3
 
 # ESP32-C3
@@ -148,7 +369,10 @@ O filesystem LittleFS contém o arquivo `data/index.html` com toda a interface w
 # ESP32 padrão
 pio run --target uploadfs -e esp32dev
 
-# ESP32-S3
+# ESP32-S3 N16R8 (RECOMENDADO - 6MB LittleFS disponivel)
+pio run --target uploadfs -e esp32-s3-n16r8
+
+# ESP32-S3 generico
 pio run --target uploadfs -e esp32-s3
 ```
 
