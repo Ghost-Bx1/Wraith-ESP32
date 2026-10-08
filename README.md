@@ -6,6 +6,22 @@
 
 ---
 
+## Screenshots
+
+| Scanner WiFi | Packet Sniffer |
+|---|---|
+| ![Scanner](docs/screenshots/01-scanner.jpg) | ![Sniffer](docs/screenshots/02-packet-sniffer.jpg) |
+
+| Deauth Attack | Evil Twin + Captive Portal |
+|---|---|
+| ![Deauth](docs/screenshots/04-deauth.jpg) | ![Evil Twin](docs/screenshots/05-evil-twin.jpg) |
+
+| Auto-Attack (Wifite) | Karma Attack |
+|---|---|
+| ![Wifite](docs/screenshots/06-wifite.jpg) | ![Karma](docs/screenshots/07-karma.jpg) |
+
+---
+
 ## Índice
 
 1. [O que é o Ghost Predator Mobile](#o-que-é-o-ghost-predator-mobile)

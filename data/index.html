@@ -362,6 +362,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
   <div id="topbar-right">
     <div class="sys-chip" id="chip-heap" title="Memória RAM livre">RAM --</div>
     <div class="sys-chip" id="chip-ch" title="Canal WiFi atual do sniffer">CH --</div>
+    <div class="sys-chip" id="chip-hs-badge" title="Handshakes + PMKIDs capturados" style="display:none;color:var(--green);border-color:rgba(34,197,94,.4)"><i class="fa-solid fa-key" style="font-size:.55rem"></i> <span id="chip-hs-count">0</span></div>
     <div class="sys-chip" id="chip-uptime" title="Uptime do dispositivo">00:00:00</div>
     <button class="icon-btn" id="btn-sound" onclick="toggleSound()" title="Alertas sonoros (ativo)"><i class="fa-solid fa-volume-high" id="sound-icon"></i></button>
     <button class="icon-btn" id="btn-stealth" onclick="toggleStealth()" title="Stealth Mode - reduz transmissao e atividade visivel"><i class="fa-solid fa-user-ninja"></i></button>
@@ -548,7 +549,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
         <a href="/api/export/pcap" class="btn btn-ghost" style="padding:4px 10px" download="capture.pcap"><i class="fa-solid fa-file-arrow-down"></i> PCAP</a>
       </div>
     </div>
-    <div class="info-box">Format hashcat <code>-m 22000</code>: <b>hashcat -m 22000 pmkids.txt wordlist.txt</b></div>
+    <div class="info-box">Format hashcat <code>-m 22000</code>: <b>hashcat -m 22000 pmkids.txt wordlist.txt</b>
+    <button class="btn btn-ghost" style="padding:2px 8px;font-size:.65rem;margin-left:8px" onclick="navigator.clipboard.writeText('hashcat -m 22000 pmkids.txt wordlist.txt').then(()=>showToast('Comando copiado'))"><i class="fa-solid fa-copy"></i> Copiar</button></div>
     <div class="tbl-wrap">
     <table class="tbl"><thead><tr><th>AP</th><th>Cliente</th><th>PMKID</th><th>Tempo</th></tr></thead>
     <tbody id="t-pmkids"></tbody></table>
@@ -1176,6 +1178,7 @@ Oi_Fibra</textarea>
       <div class="card-icon" style="background:var(--accent)"><i class="fa-solid fa-microchip"></i></div>
       <div class="card-title">Informações do Dispositivo</div>
       <button class="btn btn-ghost" style="margin-left:auto;font-size:.7rem;padding:4px 10px" onclick="loadSysInfo()"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+      <button class="btn btn-ghost" style="font-size:.7rem;padding:4px 10px" onclick="exportDiag()" title="Copiar diagnóstico do sistema"><i class="fa-solid fa-clipboard"></i> Diagnóstico</button>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:.78rem">
       <tbody id="sysinfo-table">
@@ -1202,7 +1205,7 @@ Oi_Fibra</textarea>
 <div id="console-wrap">
   <div id="con-head">
     <div class="con-dot" id="ws-dot"></div>
-    <div id="con-title">Console &mdash; Tempo Real</div>
+    <div id="con-title">Console - Tempo Real</div>
     <span id="ws-status" style="font-size:.65rem;color:var(--muted);margin-left:6px">desconectado</span>
     <div style="margin-left:auto;display:flex;gap:4px;align-items:center">
       <span style="font-size:.6rem;color:var(--muted);margin-right:2px">Nível:</span>
@@ -1378,6 +1381,7 @@ function nav(el, id) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   el.classList.add('active');
+  if (_curPage === 'sysinfo' && id !== 'sysinfo') clearTimeout(_siTimer);
   _curPage = id;
   if (id === 'probes') loadProbes();
   if (id === 'hidden') loadHiddenResults();
@@ -1574,6 +1578,14 @@ function applyStatus(s) {
   }
 
   // Toast notifications + alerta sonoro
+  // Badge HS+PMKIDs na topbar
+  const totalCaptures = (s.handshakes||0) + (s.pmkids||0);
+  const hsBadge = document.getElementById('chip-hs-badge');
+  if (hsBadge) {
+    hsBadge.style.display = totalCaptures > 0 ? '' : 'none';
+    setText('chip-hs-count', totalCaptures);
+  }
+
   if ((s.pmkids||0) > _prevPmkids) {
     _playAlert();
     toast('grn', 'fa-database', 'PMKID capturado! Total: ' + s.pmkids);
@@ -1989,9 +2001,12 @@ function deauthStart() {
 }
 
 // ── SYSTEM INFO ───────────────────────────────────────────────────────────────
+let _siTimer = null;
+let _siData = null;
 async function loadSysInfo() {
   const d = await apiGet('/api/system/info');
   if (!d) return;
+  _siData = d;
   setText('si-freq', d.freq);
   setText('si-heap', fmtB(d.heap));
   setText('si-heap-min', fmtB(d.heap_min));
@@ -2011,6 +2026,34 @@ async function loadSysInfo() {
   tb.innerHTML = rows.map(([k,v]) =>
     `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 4px;color:var(--muted);width:40%">${k}</td><td class="mono" style="padding:6px 4px">${v||'-'}</td></tr>`
   ).join('');
+  // Auto-refresh a cada 10s enquanto na pagina sysinfo
+  clearTimeout(_siTimer);
+  if (_curPage === 'sysinfo') _siTimer = setTimeout(loadSysInfo, 10000);
+}
+async function exportDiag() {
+  const d = _siData || await apiGet('/api/system/info');
+  if (!d) { toast('yel','fa-triangle-exclamation','Carregue Info Sistema primeiro'); return; }
+  const s = lastStatus;
+  const txt = [
+    '=== Ghost Predator Mobile - Diagnostico ===',
+    'Data: ' + new Date().toLocaleString('pt-BR'),
+    '',
+    '--- Hardware ---',
+    'Chip: ' + (d.chip||'?'),
+    'CPU: ' + (d.freq||'?') + ' MHz | Cores: ' + (d.cores||'?'),
+    'Flash: ' + fmtB(d.flash||0) + ' | Sketch: ' + fmtB(d.sketch||0),
+    'Heap Livre: ' + fmtB(d.heap||0) + ' | Heap Min: ' + fmtB(d.heap_min||0),
+    'MAC AP: ' + (d.mac_ap||'?') + ' | MAC STA: ' + (d.mac_sta||'?'),
+    'SDK: ' + (d.sdk||'?'),
+    'Uptime: ' + fmtUp(d.uptime||0),
+    '',
+    '--- Capturas ---',
+    'APs: ' + (s.aps||0) + ' | Clientes: ' + (s.clients||0),
+    'Handshakes: ' + (s.handshakes||0) + ' | PMKIDs: ' + (s.pmkids||0),
+    'Credenciais ET: ' + (s.creds||0),
+    'Probes: ' + (s.probes||0),
+  ].join('\n');
+  navigator.clipboard.writeText(txt).then(() => toast('grn','fa-clipboard','Diagnostico copiado para clipboard'));
 }
 
 // ── SNIFFER ───────────────────────────────────────────────────────────────────
