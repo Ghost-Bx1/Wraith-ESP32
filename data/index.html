@@ -295,7 +295,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <span class="login-badge">v4.1 &nbsp;·&nbsp; ESP32</span>
+      <span class="login-badge">v4.3 &nbsp;·&nbsp; ESP32</span>
       <i class="fa-solid fa-ghost ghost-icon"></i>
       <h1>Ghost <span>Predator</span> Mobile</h1>
       <p>Wireless Security Assessment Platform</p>
@@ -421,7 +421,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
   <div class="qa-card">
     <div class="qa-title"><i class="fa-solid fa-crosshairs"></i> Quick Attack</div>
     <div class="qa-desc">Selecione um AP na tabela abaixo e clique em <b>Attack</b> para iniciar Deauth + Auto-Capture do handshake WPA2 em um clique.</div>
-    <div id="qa-target-row" style="display:none;margin:8px 0 4px;padding:7px 10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.3);border-radius:7px;font-size:.75rem;display:flex;align-items:center;gap:10px">
+    <div id="qa-target-row" style="display:none;margin:8px 0 4px;padding:7px 10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.3);border-radius:7px;font-size:.75rem;align-items:center;gap:10px">
       <i class="fa-solid fa-crosshairs" style="color:var(--red)"></i>
       <span style="color:var(--muted)">Alvo:</span>
       <b id="qa-target-ssid" style="color:var(--text)">—</b>
@@ -522,7 +522,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
         <button class="btn btn-ghost" style="padding:4px 10px" onclick="loadHsStates()"><i class="fa-solid fa-rotate"></i></button>
       </div>
     </div>
-    <div class="info-box">M1+M2 = <b style="color:var(--yel)">CRACKABLE</b> (hashcat -m 22000) &nbsp;|&nbsp; M1+M2+M3+M4 = <b style="color:var(--green)">COMPLETO</b> (aircrack-ng)</div>
+    <div class="info-box">M1+M2 = <b style="color:var(--yellow)">CRACKABLE</b> (hashcat -m 22000) &nbsp;|&nbsp; M1+M2+M3+M4 = <b style="color:var(--green)">COMPLETO</b> (aircrack-ng)</div>
     <div class="tbl-wrap">
     <table class="tbl"><thead><tr><th>AP</th><th>Cliente</th><th>Mensagens</th><th>Status</th><th>Tempo</th></tr></thead>
     <tbody id="t-hs-states"></tbody></table>
@@ -619,15 +619,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         <label class="check-row" style="margin:0;background:var(--card2);border-radius:6px;padding:5px 10px;cursor:pointer">
           <input type="checkbox" id="d-null" checked onchange="updateDeauthOptions()">
-          <span style="font-size:.72rem"><b>Null Frame PM=1</b> — power-save trick, para fluxo de dados</span>
+          <span style="font-size:.72rem"><b>Null Frame PM=1</b> - power-save trick, para fluxo de dados</span>
         </label>
         <label class="check-row" style="margin:0;background:var(--card2);border-radius:6px;padding:5px 10px;cursor:pointer">
           <input type="checkbox" id="d-pmf" onchange="updateDeauthOptions()">
-          <span style="font-size:.72rem"><b>SA Query Flood</b> — bypass 802.11w/PMF</span>
+          <span style="font-size:.72rem"><b>SA Query Flood</b> - bypass 802.11w/PMF</span>
         </label>
         <label class="check-row" style="margin:0;background:var(--card2);border-radius:6px;padding:5px 10px;cursor:pointer">
           <input type="checkbox" id="d-assoc" onchange="updateDeauthOptions()">
-          <span style="font-size:.72rem"><b>Auth Flood</b> — inunda tabela de associação do AP</span>
+          <span style="font-size:.72rem"><b>Auth Flood</b> - inunda tabela de associação do AP</span>
         </label>
       </div>
     </div>
@@ -754,7 +754,7 @@ Oi_Fibra</textarea>
       <div class="card-icon orange"><i class="fa-solid fa-list"></i></div>
       <div class="card-title">SSIDs Respondidos</div>
       <span class="badge badge-yel" id="karma-cnt" style="margin-left:auto" title="SSIDs únicos respondidos">0</span>
-      <span class="badge badge-cyan" id="karma-known-cnt" style="margin-left:6px" title="SSIDs conhecidos (coletados de probes — usados pelo MANA)">0 conhecidos</span>
+      <span class="badge badge-cyan" id="karma-known-cnt" style="margin-left:6px" title="SSIDs conhecidos (coletados de probes - usados pelo MANA)">0 conhecidos</span>
     </div>
     <div id="karma-list" style="color:var(--muted);font-size:.78rem;padding:8px 0">Nenhum ainda.</div>
   </div>
@@ -1216,7 +1216,7 @@ Oi_Fibra</textarea>
     </div>
   </div>
   <div id="con-resize-handle" style="height:5px;cursor:ns-resize;background:transparent;border-top:1px solid var(--border);flex-shrink:0" title="Arraste para redimensionar o console"></div>
-  <div id="ws-offline-bar"><i class="fa-solid fa-wifi" style="margin-right:4px"></i>WiFi/WS desconectado — tentando reconectar... logs podem estar incompletos</div>
+  <div id="ws-offline-bar"><i class="fa-solid fa-wifi" style="margin-right:4px"></i>WiFi/WS desconectado - tentando reconectar... logs podem estar incompletos</div>
   <div id="con-body"></div>
 </div>
 
@@ -1242,7 +1242,7 @@ function toggleSound() {
   localStorage.setItem('gpm_muted', _soundMuted);
   document.getElementById('sound-icon').className = _soundMuted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
   document.getElementById('btn-sound').style.color = _soundMuted ? 'var(--red)' : '';
-  document.getElementById('btn-sound').title = _soundMuted ? 'Alertas sonoros (mudo — clique para ativar)' : 'Alertas sonoros (ativo)';
+  document.getElementById('btn-sound').title = _soundMuted ? 'Alertas sonoros (mudo - clique para ativar)' : 'Alertas sonoros (ativo)';
 }
 (function(){ _soundMuted = localStorage.getItem('gpm_muted')==='true'; if (_soundMuted) toggleSound(); })();
 
@@ -1785,7 +1785,7 @@ function renderAPTable(data) {
     const dist = rssiToDistance(ap.rssi);
     const qual = pct;
     const vendor = ouiLookup(ap.bssid) || '<span style="color:var(--muted)">-</span>';
-    const rssiColor = ap.rssi > -60 ? 'var(--green)' : ap.rssi > -75 ? 'var(--yel)' : 'var(--red)';
+    const rssiColor = ap.rssi > -60 ? 'var(--green)' : ap.rssi > -75 ? 'var(--yellow)' : 'var(--red)';
     const hiddenBadge = ap.hidden ? '<span class="badge badge-yel" style="font-size:.55rem;margin-left:3px">HIDDEN</span>' : '';
     const wpsBadge = ap.wps ? '<span class="badge badge-red" style="font-size:.55rem;margin-left:3px">WPS</span>' : '';
     const isSel = _selAP && _selAP.bssid === ap.bssid;
@@ -1837,7 +1837,7 @@ async function wifiScan() {
       ? (c.probes||[]).map(p=>`<span style="background:var(--surface2);border-radius:3px;padding:1px 4px;margin:1px;font-size:.6rem;display:inline-block">${esc(p)}</span>`).join('')
       : '<span style="color:var(--muted);font-size:.6rem">-</span>';
     const dist = rssiToDistance(c.rssi);
-    const rssiColor = c.rssi > -60 ? 'var(--green)' : c.rssi > -75 ? 'var(--yel)' : 'var(--red)';
+    const rssiColor = c.rssi > -60 ? 'var(--green)' : c.rssi > -75 ? 'var(--yellow)' : 'var(--red)';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="mono" style="font-size:.7rem">${c.mac}</td>
@@ -1881,7 +1881,7 @@ function filterByChannel(ch) {
     _scanFilter = '';
     renderAPTable(_apList.filter(ap => ap.channel === ch));
     buildChMap(_lastCounts||{});
-    toast('cyan','fa-filter','Filtrando canal ' + ch + ' — ' + (_apList.filter(ap=>ap.channel===ch).length) + ' rede(s)');
+    toast('cyan','fa-filter','Filtrando canal ' + ch + ' - ' + (_apList.filter(ap=>ap.channel===ch).length) + ' rede(s)');
   }
 }
 
@@ -2154,7 +2154,7 @@ function renderProbes(pr) {
     tbpr.innerHTML = '';
     pr.forEach(p => {
       const vendor = ouiLookup(p.mac);
-      const rssiColor = p.rssi > -60 ? 'var(--green)' : p.rssi > -75 ? 'var(--yel)' : 'var(--red)';
+      const rssiColor = p.rssi > -60 ? 'var(--green)' : p.rssi > -75 ? 'var(--yellow)' : 'var(--red)';
       const tr = document.createElement('tr');
       tr.innerHTML = `<td class="mono" style="font-size:.7rem">${p.mac}</td>
         <td style="font-size:.65rem;color:var(--cyan)">${vendor||'-'}</td>
@@ -2176,7 +2176,7 @@ function renderProbes(pr) {
     const el = document.getElementById('probe-grouped-view');
     el.innerHTML = Object.values(byMac).sort((a,b) => b.rssi - a.rssi).map(d => {
       const vendor = ouiLookup(d.mac);
-      const rssiColor = d.rssi > -60 ? 'var(--green)' : d.rssi > -75 ? 'var(--yel)' : 'var(--red)';
+      const rssiColor = d.rssi > -60 ? 'var(--green)' : d.rssi > -75 ? 'var(--yellow)' : 'var(--red)';
       const ssidsHtml = d.ssids.length
         ? d.ssids.map(s=>`<span style="background:var(--surface2);border-radius:4px;padding:2px 6px;margin:2px;font-size:.65rem;display:inline-block">${esc(s)}</span>`).join('')
         : '<span style="color:var(--muted);font-size:.65rem">sem SSIDs (wildcard)</span>';
@@ -2282,7 +2282,7 @@ async function karmaStart() {
 async function manaStart() {
   if (!lastStatus.sniffer) await apiPost('/api/sniffer/start');
   await apiPost('/api/karma/mana');
-  toast('red','fa-bolt','MANA Attack ativo — respondendo com TODOS SSIDs conhecidos');
+  toast('red','fa-bolt','MANA Attack ativo - respondendo com TODOS SSIDs conhecidos');
 }
 let _chartDebTimer = null;
 function _debouncedChannelChart() {
@@ -2434,7 +2434,7 @@ async function loadWPS() {
       <td>${r.channel}</td>
       <td><span class="badge ${r.version==='1.0'?'badge-red':'badge-yel'}">v${r.version}</span></td>
       <td>${r.methods}</td>
-      <td><span style="color:${r.rssi>-70?'var(--green)':'var(--yel)'}">${r.rssi}dBm</span> <span style="color:var(--muted);font-size:.65rem">${dist}</span></td>
+      <td><span style="color:${r.rssi>-70?'var(--green)':'var(--yellow)'}">${r.rssi}dBm</span> <span style="color:var(--muted);font-size:.65rem">${dist}</span></td>
       <td>${locked}${pin}${pbc}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-danger" style="padding:3px 8px;font-size:.6rem" title="Deauth + captura handshake" onclick="quickAttack('${r.bssid}',${r.channel})"><i class="fa-solid fa-bolt"></i></button>
@@ -2625,7 +2625,7 @@ async function wifiteRefresh() {
   const remaining = stateT > 0 ? Math.max(0, stateT - elapsed) : 0;
   const countdownStr = (d.running && remaining > 0) ? ` (${remaining}s)` : '';
   document.getElementById('wf-msg').textContent = d.running
-    ? `[${d.cur+1}/${d.total}] ${cur ? cur.ssid : ''} — ${stateNames[d.state]||''}${countdownStr}`
+    ? `[${d.cur+1}/${d.total}] ${cur ? cur.ssid : ''} - ${stateNames[d.state]||''}${countdownStr}`
     : (d.state === 5 ? 'Concluido!' : 'Parado');
   // Stats
   let pmkids=0, hs=0, creds=0;
@@ -2636,7 +2636,7 @@ async function wifiteRefresh() {
   setText('sc-wifite', d.running ? 'ON' : '');
   // Tabela de alvos
   const el = document.getElementById('wifite-targets');
-  if (!d.targets || !d.targets.length) { el.textContent = 'Sem alvos — execute scan WiFi primeiro.'; return; }
+  if (!d.targets || !d.targets.length) { el.textContent = 'Sem alvos - execute scan WiFi primeiro.'; return; }
   el.innerHTML = '<table class="tbl"><thead><tr><th>SSID</th><th>BSSID</th><th>RSSI</th><th>WPS</th><th>PMKID</th><th>HS</th><th>Creds</th><th>Status</th></tr></thead><tbody>' +
     d.targets.map((t,i) => {
       const active = t.active;
@@ -2656,7 +2656,7 @@ async function wifiteRefresh() {
 }
 function rssiColor(r) {
   if (r > -50) return 'var(--green)';
-  if (r > -70) return 'var(--yel)';
+  if (r > -70) return 'var(--yellow)';
   return 'var(--red)';
 }
 
