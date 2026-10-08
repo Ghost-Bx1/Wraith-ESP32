@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ghost Predator">
+<meta name="theme-color" content="#080810">
 <title>Ghost Predator Mobile</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237c3aed'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-size='20' fill='white'%3E👻%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -231,6 +236,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 .toast.grn{border-left:3px solid var(--green)}.toast.grn i{color:var(--green)}
 .toast.red{border-left:3px solid var(--red)}.toast.red i{color:var(--red)}
 .toast.yel{border-left:3px solid var(--yellow)}.toast.yel i{color:var(--yellow)}
+.toast.cyan{border-left:3px solid var(--cyan)}.toast.cyan i{color:var(--cyan)}
+.toast.accent{border-left:3px solid var(--accent2)}.toast.accent i{color:var(--accent2)}
+.toast.orange{border-left:3px solid var(--orange)}.toast.orange i{color:var(--orange)}
+.toast.gray{border-left:3px solid var(--muted)}.toast.gray i{color:var(--muted)}
 @keyframes toastIn{from{opacity:0;transform:translateX(24px) scale(.95)}to{opacity:1;transform:none}}
 
 /* ── TARGET MANAGER ───────────────────────────────────────────────────────*/
@@ -582,7 +591,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 <div class="page" id="page-deauth">
   <div id="deauth-bar" class="atk-bar" style="display:none">
     <i class="fa-solid fa-bolt"></i>
-    <span>Deauth ativo &nbsp;|&nbsp; <b id="df-count">0</b> frames &nbsp;·&nbsp; <b id="df-fps">—</b> f/s</span>
+    <span>Deauth ativo &nbsp;|&nbsp; <b id="df-count">0</b> frames &nbsp;·&nbsp; <b id="df-fps">—</b> f/s &nbsp;·&nbsp; <span id="df-timer" style="color:var(--muted);font-size:.65rem">0s</span></span>
     <button class="btn btn-ghost" style="margin-left:auto;padding:3px 10px;font-size:.7rem" onclick="apiPost('/api/deauth/stop')"><i class="fa-solid fa-stop"></i> Parar</button>
   </div>
   <div class="card">
@@ -1223,6 +1232,8 @@ const TOAST_DUR = 5000;
 let targets = JSON.parse(localStorage.getItem('gpm_targets') || '[]');
 let lastStatus = {};
 let _dfPrev = null;
+let _lastCounts = {};
+let _deauthStart = null;
 
 // ── SOUND TOGGLE ─────────────────────────────────────────────────────────────
 let _soundMuted = false;
@@ -1273,6 +1284,12 @@ function togglePw() {
   else { inp.type='password'; ic.className='fa-solid fa-eye'; }
 }
 document.getElementById('login-pass').addEventListener('keydown', e => e.key==='Enter' && doLogin());
+function _enterApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  wsConnect();
+  pollStatus();
+}
 async function doLogin() {
   const pass = document.getElementById('login-pass').value;
   const err  = document.getElementById('login-err');
@@ -1284,22 +1301,33 @@ async function doLogin() {
     });
     const d = await r.json();
     if (d.ok) {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app').style.display = 'flex';
-      wsConnect();
-      pollStatus();
+      try { localStorage.setItem('gpm_session', JSON.stringify({ ts: Date.now() })); } catch(_) {}
+      _enterApp();
     } else {
       err.style.display = 'block';
       document.getElementById('login-pass').value = '';
+      try { localStorage.removeItem('gpm_session'); } catch(_) {}
     }
   } catch(_) { err.style.display = 'block'; }
 }
 async function doLogout() {
   await fetch('/api/logout', { method:'POST' });
+  try { localStorage.removeItem('gpm_session'); } catch(_) {}
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pass').value = '';
 }
+(async function tryAutoLogin() {
+  try {
+    const raw = localStorage.getItem('gpm_session');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (Date.now() - s.ts > 30 * 60 * 1000) { localStorage.removeItem('gpm_session'); return; }
+    const r = await fetch('/api/status');
+    if (r.ok) { _enterApp(); }
+    else { localStorage.removeItem('gpm_session'); }
+  } catch(_) {}
+})();
 function openChpass() {
   document.getElementById('cp-cur').value = '';
   document.getElementById('cp-new').value = '';
@@ -1497,6 +1525,9 @@ function applyStatus(s) {
 
   if (s.deauth) {
     document.getElementById('deauth-bar').style.display = 'flex';
+    if (!_deauthStart) _deauthStart = Date.now();
+    const elapsed = Math.floor((Date.now() - _deauthStart) / 1000);
+    setText('df-timer', fmtUp(elapsed));
     const dlsEl = document.getElementById('deauth-live-stats');
     if (dlsEl) dlsEl.style.display = 'flex';
     const frames = s.deauth_frames || 0;
@@ -1517,6 +1548,7 @@ function applyStatus(s) {
     const dlsEl = document.getElementById('deauth-live-stats');
     if (dlsEl) dlsEl.style.display = 'none';
     _dfPrev = null;
+    _deauthStart = null;
   }
 
   setText('fisher-att', s.fisher_attempts||0);
@@ -1694,7 +1726,9 @@ function toggleAutoScan() {
 
 function filterAPs(val) {
   _scanFilter = val.toLowerCase();
+  _chFilter = 0;
   renderAPTable(_apList);
+  if (_lastCounts) buildChMap(_lastCounts);
 }
 
 function rssiToQuality(rssi) {
@@ -1754,8 +1788,10 @@ function renderAPTable(data) {
     const rssiColor = ap.rssi > -60 ? 'var(--green)' : ap.rssi > -75 ? 'var(--yel)' : 'var(--red)';
     const hiddenBadge = ap.hidden ? '<span class="badge badge-yel" style="font-size:.55rem;margin-left:3px">HIDDEN</span>' : '';
     const wpsBadge = ap.wps ? '<span class="badge badge-red" style="font-size:.55rem;margin-left:3px">WPS</span>' : '';
+    const isSel = _selAP && _selAP.bssid === ap.bssid;
     const tr = document.createElement('tr');
     tr.dataset.bssid = ap.bssid;
+    if (isSel) tr.style.cssText = 'background:rgba(239,68,68,.07);outline:1px solid rgba(239,68,68,.25)';
     tr.innerHTML = `
       <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b>${hiddenBadge}${wpsBadge}</td>
       <td class="mono" style="font-size:.7rem">${ap.bssid} <button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem" title="Copiar BSSID" onclick="navigator.clipboard.writeText('${ap.bssid}');showToast('BSSID copiado')"><i class="fa-solid fa-copy"></i></button></td>
@@ -1781,6 +1817,7 @@ async function wifiScan() {
   data.sort((a,b) => b.rssi - a.rssi);
   const chCount = {};
   data.forEach(ap => { chCount[ap.channel] = (chCount[ap.channel]||0)+1; });
+  _lastCounts = chCount;
   buildChMap(chCount);
   setText('scan-total', data.length);
   // Mini stats
@@ -1812,6 +1849,7 @@ async function wifiScan() {
   });
 }
 
+let _chFilter = 0;
 function buildChMap(counts) {
   const el = document.getElementById('ch-map');
   el.innerHTML = '';
@@ -1822,12 +1860,28 @@ function buildChMap(counts) {
     const h = Math.max(2, Math.round((n/max)*44));
     const pct = total > 0 ? Math.round(n/total*100) : 0;
     const busy = n >= Math.ceil(max * 0.6);
-    const col = busy ? 'var(--red)' : n > 0 ? 'var(--accent2)' : '';
-    el.innerHTML += `<div class="ch-col" title="Canal ${ch}: ${n} rede(s)${pct?', '+pct+'% do total':''}">
+    const active = _chFilter === ch;
+    const col = active ? 'var(--cyan)' : busy ? 'var(--red)' : n > 0 ? 'var(--accent2)' : '';
+    el.innerHTML += `<div class="ch-col" title="Canal ${ch}: ${n} rede(s)${pct?', '+pct+'%':''}. Clique para filtrar." style="cursor:${n?'pointer':'default'};outline:${active?'1px solid var(--cyan)':'none'};border-radius:3px" onclick="filterByChannel(${ch})">
       <div class="ch-bar" style="height:${h}px;opacity:${n?1:.15}${col?';background:'+col:''}"></div>
-      ${n>0?`<div style="font-size:.55rem;color:${busy?'var(--red)':'var(--muted)'};margin-bottom:1px">${n}</div>`:'<div style="height:10px"></div>'}
-      <div class="ch-lbl" style="color:${busy?'var(--red)':''}">${ch}</div>
+      ${n>0?`<div style="font-size:.55rem;color:${active?'var(--cyan)':busy?'var(--red)':'var(--muted)'};margin-bottom:1px">${n}</div>`:'<div style="height:10px"></div>'}
+      <div class="ch-lbl" style="color:${active?'var(--cyan)':busy?'var(--red)':''}">${ch}</div>
     </div>`;
+  }
+}
+function filterByChannel(ch) {
+  if (_chFilter === ch) {
+    _chFilter = 0;
+    _scanFilter = '';
+    renderAPTable(_apList);
+    buildChMap(_lastCounts||{});
+    toast('gray','fa-filter-circle-xmark','Filtro de canal removido');
+  } else {
+    _chFilter = ch;
+    _scanFilter = '';
+    renderAPTable(_apList.filter(ap => ap.channel === ch));
+    buildChMap(_lastCounts||{});
+    toast('cyan','fa-filter','Filtrando canal ' + ch + ' — ' + (_apList.filter(ap=>ap.channel===ch).length) + ' rede(s)');
   }
 }
 
