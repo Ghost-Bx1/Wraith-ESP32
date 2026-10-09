@@ -2,7 +2,7 @@
 
 // ── AP de gerência (painel web) ───────────────────────────────────────────────
 #define AP_SSID        "GhostPredator"
-#define AP_PASS        "predator123"
+#define AP_PASS        "predator"
 #define AP_CHANNEL     1
 #define AP_IP          "192.168.4.1"
 #define MDNS_HOST      "ghostpredator"  // acessível em http://ghostpredator.local

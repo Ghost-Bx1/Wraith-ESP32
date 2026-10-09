@@ -23,7 +23,7 @@
 
 | Componente | GPIO | Funcao no Ghost Predator |
 |-----------|------|--------------------------|
-| **WS2812 RGB LED** | GPIO 38 | Indicador visual de estado do sistema |
+| **WS2812 RGB LED** | GPIO 48 (tente 38 se nao acender) | Indicador visual de estado do sistema |
 | **Botao BOOT** | GPIO 0 | Pausar/retomar ataques; 2x cliques = scan rapido |
 | **Botao RST** | RST | Reiniciar o dispositivo |
 | **USB OTG** | GPIO19/20 | Conectar segundo radio via USB (modulo externo) |
@@ -32,7 +32,7 @@
 
 ### LED RGB — Significado das Cores
 
-O LED WS2812 no GPIO 38 indica o estado atual do sistema em tempo real:
+O LED WS2812 no GPIO 48 indica o estado atual do sistema em tempo real:
 
 | Cor | Padrao | Estado |
 |-----|--------|--------|
@@ -52,11 +52,62 @@ O LED WS2812 no GPIO 38 indica o estado atual do sistema em tempo real:
 - **2 cliques rapidos**: Inicia scan rapido de redes
 - **Segurar durante power-on**: Entra em modo bootloader (para novo firmware)
 
-### Porta USB OTG — Segundo Radio
+### Acesso ao Painel Web
 
-O conector USB-C esquerdo e a porta USB OTG do ESP32-S3. Com ela voce pode:
+| Item | Valor |
+|------|-------|
+| **Rede WiFi** | GhostPredator |
+| **Senha WiFi** | predator |
+| **IP do painel** | http://192.168.4.1 |
+| **URL alternativa** | http://ghostpredator.local |
+| **Senha do painel** | predator |
 
-**Conectar um segundo modulo ESP32 como radio adicional:**
+> Primeiro acesso: conecte ao WiFi "GhostPredator" com senha **predator**, depois abra http://192.168.4.1 no navegador.
+
+---
+
+### Porta USB OTG — Segundo Radio e Adaptadores USB
+
+O conector USB-C **esquerdo** e a porta USB OTG do ESP32-S3. Suporta dois modos:
+
+#### Modo 1 — Adaptador RTL8188 (modo monitor + injecao)
+
+Conecte um adaptador WiFi RTL8188EU ou RTL8188CUS para ter um segundo radio independente capaz de modo monitor real e injecao de frames simultaneamente ao AP principal.
+
+```
+[ESP32-S3 N16R8]
+  USB OTG (esq) ──USB-C──► Adaptador RTL8188EU/CUS
+                              │ Modo monitor ativo
+                              └─► Captura + injeta frames 802.11
+```
+
+**Adaptadores compativeis:**
+
+| Chip | Exemplos de adaptadores | PID USB |
+|------|------------------------|---------|
+| **RTL8188EU** | TL-WN722N v1, Alfa AWUS036NHR | 0x8179 |
+| **RTL8188CUS** | Adaptadores USB nano baratos | 0x8176 |
+
+> **ATENCAO**: TL-WN722N **v2 e v3** usam chip AR9271 (Atheros) — **incompativeis**. So a v1 usa RTL8188EU. Verifique a versao na embalagem.
+
+**Como ativar:**
+
+1. Conecte o adaptador RTL8188 na porta USB-C esquerda (OTG)
+2. Em `src/config.h`, descomente:
+   ```cpp
+   #define USB_RTL8188 1
+   ```
+3. Regrave o firmware: `pio run -e esp32-s3 -t upload --upload-port COM5`
+4. O driver detecta e inicializa automaticamente ao conectar o adaptador
+
+**Recursos do driver RTL8188:**
+- Modo monitor automatico (captura todos os frames 802.11 do ar)
+- Injecao de frames raw (deauth, beacon, probe) sem afetar o AP principal
+- Troca de canal via registrador (1-14)
+- Frames capturados sao processados pelo Sniffer interno automaticamente
+
+#### Modo 2 — Segundo ESP32 como radio escravo
+
 ```
 [ESP32-S3 N16R8]          [Segundo ESP32 — radio externo]
   USB OTG (esq) ──USB-C──► USB-UART (CH340/CP2102)
@@ -73,7 +124,7 @@ O conector USB-C esquerdo e a porta USB OTG do ESP32-S3. Com ela voce pode:
    #define USB_RADIO_TX      17
    #define USB_RADIO_RX      18
    ```
-4. O segundo radio aparecera no painel como "USB Radio" e pode executar ataques paralelos
+4. O segundo radio aparecera no painel como "USB Radio"
 
 **Protocolo de comunicacao USB Radio:**
 
@@ -1105,4 +1156,50 @@ Passo 3 - Coletar credenciais
 
 ---
 
-*Ghost Predator Mobile v4.6 - Para uso educacional e testes autorizados apenas.*
+---
+
+## Primeiros Passos — Guia Rapido
+
+```
+1. Ligue o ESP32 (qualquer fonte USB 5V, minimo 500mA)
+   → LED pisca branco no boot (sequencia R/G/B de teste)
+   → LED azul pulsando = sistema pronto
+
+2. Conecte ao WiFi
+   Rede:  GhostPredator
+   Senha: predator
+
+3. Acesse o painel
+   → http://192.168.4.1
+   → Senha: predator
+
+4. Faca o scan
+   → WiFi Scanner → Scan
+   → Aguarde 5-10 segundos
+
+5. Escolha o ataque
+   → Selecione a rede-alvo
+   → Escolha o modulo desejado
+   → LED vermelho = ataque ativo
+   → LED verde piscando = captura realizada!
+
+DICA: Use o botao BOOT para pausar todos os ataques rapidamente.
+```
+
+---
+
+## Resolucao de Problemas
+
+| Problema | Causa provavel | Solucao |
+|----------|---------------|---------|
+| Rede GhostPredator nao aparece | Dispositivo nao inicializou | Aguarde 5s e atualize a lista de WiFi |
+| "Nao foi possivel conectar" | Senha errada salva no Windows | Clique direito → Esquecer → Reconectar com "predator" |
+| Painel nao carrega | IP errado | Use http://192.168.4.1 (nao HTTPS) |
+| LED sempre verde | GPIO do LED incorreto | Altere RGB_LED_PIN para 38 em config.h e regrave |
+| LED nao acende | GPIO do LED incorreto | Altere RGB_LED_PIN para 48 em config.h e regrave |
+| Adaptador USB nao reconhecido | Chip nao compativel (AR9271) | Use adaptador RTL8188EU/CUS (TL-WN722N v1) |
+| Crash loop na inicializacao | Brownout por fonte fraca | Use fonte USB com minimo 500mA; o brownout detector esta desabilitado por firmware |
+
+---
+
+*Ghost Predator Mobile v3.5 - Para uso educacional e testes autorizados apenas.*
