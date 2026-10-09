@@ -2,6 +2,8 @@
 #include <LittleFS.h>
 #include <ESPmDNS.h>
 #include <esp_task_wdt.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 
 #include "config.h"
 #include "utils/logger.h"
@@ -14,6 +16,7 @@
 #include "wifi/karma.h"
 #include "wifi/radio2.h"
 #include "wifi/usb_radio.h"
+#include "wifi/usb_rtl8188.h"
 #include "wifi/pmkid_fisher.h"
 #include "wifi/wps_scanner.h"
 #include "wifi/target_intel.h"
@@ -47,6 +50,9 @@ void attackTask(void*) {
         EvilTwin::get().tick();
         Radio2::get().tick();
         USBRadio::get().tick();
+#ifdef USB_RTL8188
+        USBRTL8188::get().tick();
+#endif
         PMKIDFisher::get().tick();
         HiddenScanner::get().tick();
         WifiteMode::get().tick();
@@ -124,6 +130,10 @@ static void _processBoot() {
 }
 
 void setup() {
+    // Desabilita detector de brownout ANTES de qualquer init
+    // O WiFi drena ~300mA no pico; fontes USB comuns caem abaixo do limiar
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
     Serial.begin(115200);
     Serial.println("\n\n=== Ghost Predator Mobile v3.5 ===");
 
@@ -167,6 +177,13 @@ void setup() {
 
     Radio2::get().begin();
     USBRadio::get().begin();
+#ifdef USB_RTL8188
+    USBRTL8188::get().begin();
+    // Encaminha frames capturados pelo RTL8188 para o sniffer
+    USBRTL8188::get().onFrame = [](const uint8_t* f, size_t l, int8_t rssi, uint8_t ch) {
+        Sniffer::get().processFrame(f, l, ch);
+    };
+#endif
     BLEScanner::get().begin();
     NimBLEDevice::init("GhostPredator");
 

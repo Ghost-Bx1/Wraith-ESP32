@@ -64,5 +64,12 @@
 // #define USB_RADIO_TX      17    // GPIO17 (UART1 TX — livre no N16R8)
 // #define USB_RADIO_RX      18    // GPIO18 (UART1 RX — livre no N16R8)
 
+// ── Driver USB RTL8188EU/CUS (adaptador WiFi via USB OTG) ─────────────────────
+// Conecte um adaptador RTL8188EU ou RTL8188CUS no conector USB-C esquerdo (OTG).
+// Chips testados: RTL8188EU (TL-WN722N v1, Alfa AWUS036NHR), RTL8188CUS
+// ATENÇÃO: O TL-WN722N v2/v3 usa AR9271 (Atheros) — NÃO compatível!
+// Descomente a linha abaixo para ativar o driver:
+// #define USB_RTL8188 1
+
 // ── Pinos status LED (fallback para ESP32 sem WS2812) ────────────────────────
 #define LED_STATUS     2          // LED azul onboard (ESP32 original)
