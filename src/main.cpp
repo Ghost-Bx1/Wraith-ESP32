@@ -5,9 +5,22 @@
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
+// USB CDC — habilita console serial via porta USB-C esquerda (OTG)
+// Com ARDUINO_USB_CDC_ON_BOOT=1 no platformio.ini, Serial roteia para USB CDC
+// automaticamente. Para forçar log duplo (USB + UART), use USB_SERIAL_JTAG ou
+// esp_log_set_vprintf para duplicar saída — aqui usamos o Serial padrão.
+#if ARDUINO_USB_CDC_ON_BOOT
+#include "USB.h"
+#include "USBCDC.h"
+#endif
+
 #include "config.h"
 #include "utils/logger.h"
 #include "utils/rgb_led.h"
+#include "utils/channel_map.h"
+#ifdef BATTERY_PIN
+#include "utils/battery.h"
+#endif
 #include "wifi/scanner.h"
 #include "wifi/deauth.h"
 #include "wifi/sniffer.h"
@@ -135,7 +148,14 @@ void setup() {
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
     Serial.begin(115200);
-    Serial.println("\n\n=== Ghost Predator Mobile v3.5 ===");
+    // USB CDC: o mesmo Serial já é roteado para USB com CDC_ON_BOOT=1
+    // Aguarda até 2s pela conexão USB (não bloqueia se não conectado)
+#if ARDUINO_USB_CDC_ON_BOOT
+    unsigned long _usbWait = millis();
+    while (!Serial && millis() - _usbWait < 2000) delay(10);
+    USB.begin();
+#endif
+    Serial.println("\n\n=== Ghost Predator Mobile v4.0 ===");
 
     // LED RGB — pisca branco no boot
     RGBLed::get().begin();
@@ -175,6 +195,19 @@ void setup() {
     Deauther::get().fnLockChannel = [](uint8_t ch) { Sniffer::get().lockChannel(ch); };
     Deauther::get().fnResumeHop   = []()            { Sniffer::get().resumeHop(); };
 
+    // Inicializa ChannelMap (#42)
+    ChannelMap::get().begin();
+    // Popula ChannelMap com o scan inicial de redes
+    WiFiScanner::get().scan();
+    for (auto& ap : WiFiScanner::get().aps())
+        ChannelMap::get().addNetwork(ap.channel, ap.rssi);
+    LOG.info("[CHAN] Melhor canal livre: " + String(ChannelMap::get().bestFreeChannel()));
+
+#ifdef BATTERY_PIN
+    BatteryMonitor::get().begin();
+    LOG.info("[BATT] " + BatteryMonitor::get().statusJson());
+#endif
+
     Radio2::get().begin();
     USBRadio::get().begin();
 #ifdef USB_RTL8188
@@ -192,7 +225,7 @@ void setup() {
     xTaskCreatePinnedToCore(bleTask,    "ble_spam", 4096, nullptr, 1, nullptr, 1);
 
     digitalWrite(LED_STATUS, HIGH);
-    LOG.success("Ghost Predator Mobile v3.3 | AP: " AP_SSID " | http://" MDNS_HOST ".local");
+    LOG.success("Ghost Predator Mobile v4.0 | AP: " AP_SSID " | http://" MDNS_HOST ".local");
     LOG.info("Heap: " + String(ESP.getFreeHeap() / 1024) + " KB livre");
 }
 

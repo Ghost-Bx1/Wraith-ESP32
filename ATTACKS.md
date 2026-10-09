@@ -1202,4 +1202,136 @@ DICA: Use o botao BOOT para pausar todos os ataques rapidamente.
 
 ---
 
-*Ghost Predator Mobile v3.5 - Para uso educacional e testes autorizados apenas.*
+## Console USB — Debug via Porta USB-C Esquerda
+
+O ESP32-S3 expoe um console serial nativo via USB CDC (sem CH343). Permite log em tempo real pelo conector USB-C esquerdo.
+
+**Como usar:**
+1. Conecte o USB-C esquerdo (OTG) ao PC
+2. Uma nova porta COM aparece no Gerenciador de Dispositivos
+3. Abra com qualquer monitor serial a 115200 baud
+4. Todos os logs do Ghost Predator aparecem em tempo real
+
+> Se precisar usar a porta OTG para um adaptador RTL8188 ao mesmo tempo, use o conector USB-C direito (CH343P) para o console. As duas portas funcionam independentemente.
+
+---
+
+## Novas Funcionalidades v4.0 — 50 Melhorias
+
+### Seguranca e Autenticacao
+
+| API | Metodo | Descricao |
+|-----|--------|-----------|
+| `/api/auth` | POST `{"pass":"predator"}` | Login com token de sessao (24h) |
+| `/api/auth/validate` | GET `?token=<tok>` | Valida token ativo |
+
+**Auto-destruct (#48):** apos 10 senhas erradas consecutivas, todas as capturas sao apagadas automaticamente. Configuravel em `config.h` → `AUTODESTRUCT_TRIES`.
+
+### Capturas Persistentes (#44)
+
+Handshakes, PMKIDs e credenciais sao salvos no filesystem LittleFS e sobrevivem ao reboot.
+
+| API | Descricao |
+|-----|-----------|
+| `/api/captures/list` | Lista arquivos de captura no filesystem |
+| `/api/captures/download?file=hs_BSSID.hc22000` | Baixa captura diretamente |
+| `/api/captures/wipe` | Apaga todas as capturas (auto-destruct manual) |
+
+Formato dos arquivos: **hc22000** (compativel com `hashcat -m 22000 arquivo.hc22000 wordlist.txt`)
+
+### Mapa de Canais (#42)
+
+| API | Descricao |
+|-----|-----------|
+| `/api/channels` | JSON com count de APs e RSSI medio por canal (1-13) |
+| `/api/channels/best` | Canal menos congestionado para Evil Twin/Karma |
+
+Populado automaticamente no boot com scan inicial.
+
+### Interferencia Bluetooth (#BT_JAM)
+
+Novo modo `MODE_INTERFERE` no BLE Spam — satura os 3 canais de advertisement BLE (37, 38, 39) com ~800 pacotes/segundo de payload aleatorio, degradando conexoes Bluetooth proximas.
+
+```
+POST /api/blespam/interfere
+```
+
+> Afeta BLE 4.x/5.x. BT Classic nao e afetado (opera em canais diferentes).
+
+### Deauth Stealth (#21)
+
+Modo furtivo: intervalos aleatorios de 200ms-2s entre rajadas de deauth, evitando deteccao por IDS/WIDS baseados em frequencia de frames.
+
+```json
+POST /api/deauth/options
+{"stealth": true}
+```
+
+### Karma com Blacklist (#19)
+
+O Karma nunca responde a SSIDs sensiveis configurados em `config.h → KARMA_BLACKLIST`:
+- Redes corporativas: eduroam, govwifi
+- Operadoras BR: Claro, TIM, Vivo, Oi, NET
+- Hotspots moveis: AndroidAP, iPhone, Hotspot
+
+### Lookup de Fabricante OUI (#11)
+
+```
+GET /api/oui?mac=AA:BB:CC:DD:EE:FF
+```
+Retorna fabricante (Apple, Samsung, TP-Link, etc.) e se o MAC e randomizado (privacidade).
+Funciona offline — tabela de ~60 fabricantes em PROGMEM.
+
+### Monitoramento de Bateria (#34)
+
+Ative em `config.h` descomentando `BATTERY_PIN`:
+```
+GET /api/battery  →  {"batt_mv":3850, "batt_pct":72, "charging":false}
+```
+
+### OTA Firmware (#36)
+
+```
+POST /api/ota/update  (multipart/form-data, campo "firmware")
+GET  /api/ota/status  →  {"updating":false, "progress":100, "success":true}
+```
+Compile com `pio run -e esp32-s3`, pegue `.pio/build/esp32-s3/firmware.bin` e envie pelo painel.
+
+### Sleep Profundo (#35)
+
+```json
+POST /api/system/sleep
+{"seconds": 3600}
+```
+ESP32 entra em deep sleep e acorda apos o tempo especificado. Consome < 20µA no sono.
+
+### Opcoes Avancadas Deauth
+
+| Opcao JSON | Descricao |
+|-----------|-----------|
+| `"stealth": true` | Intervalos aleatorios entre bursts |
+| `"csaMode": true` | Channel Switch Announcement (move clientes para outro canal) |
+| `"csaChannel": 13` | Canal destino do CSA |
+| `"eapFlood": true` | EAP Identity Request flood (WPA2-Enterprise) |
+| `"tkip": true` | TKIP MIC Failure injection (WPA-TKIP legado) |
+| `"reconnectBlock": true` | Probe Response falsa — impede reconexao ao AP real |
+
+---
+
+## Resolucao de Problemas
+
+| Problema | Causa provavel | Solucao |
+|----------|---------------|---------|
+| Rede GhostPredator nao aparece | Dispositivo nao inicializou | Aguarde 5s e atualize a lista de WiFi |
+| "Nao foi possivel conectar" | Senha errada salva no Windows | Clique direito → Esquecer → Reconectar com "predator" |
+| Painel nao carrega | IP errado | Use http://192.168.4.1 (nao HTTPS) |
+| LED sempre verde | GPIO do LED incorreto | Altere RGB_LED_PIN para 38 em config.h e regrave |
+| LED nao acende | GPIO do LED incorreto | Altere RGB_LED_PIN para 48 em config.h e regrave |
+| Adaptador USB nao reconhecido | Chip nao compativel (AR9271) | Use adaptador RTL8188EU/CUS (TL-WN722N v1) |
+| Crash loop na inicializacao | Brownout por fonte fraca | Use fonte USB com minimo 500mA; o brownout detector esta desabilitado por firmware |
+| Capturas desapareceram | Auto-destruct ativado | 10 senhas erradas seguidas apagam capturas — mude AUTODESTRUCT_TRIES=0 para desabilitar |
+| Console USB nao aparece | CDC nao habilitado | Verifique que o build usa env:esp32-s3 com ARDUINO_USB_CDC_ON_BOOT=1 |
+
+---
+
+*Ghost Predator Mobile v4.0 - Para uso educacional e testes autorizados apenas.*

@@ -64,6 +64,41 @@
 // #define USB_RADIO_TX      17    // GPIO17 (UART1 TX — livre no N16R8)
 // #define USB_RADIO_RX      18    // GPIO18 (UART1 RX — livre no N16R8)
 
+// ── Segurança — Token de sessão (#46) ────────────────────────────────────────
+#define SESSION_TTL_MS    (24UL * 3600 * 1000)  // 24 horas
+
+// ── Auto-destruct (#48) — apaga capturas após N senhas erradas consecutivas ──
+#define AUTODESTRUCT_TRIES  10   // 0 = desabilitado
+
+// ── Whitelist de MACs (#47) — lista vazia = aceita todos ──────────────────────
+// Adicione MACs permitidos (separados por vírgula):
+// #define MAC_WHITELIST "AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"
+
+// ── Bateria LiPo via ADC (#34) ────────────────────────────────────────────────
+// #define BATTERY_PIN    7     // GPIO com divisor 100kΩ+100kΩ → VBat/2
+// #define BATTERY_CHG_PIN 6   // GPIO para detectar carga (LOW = carregando)
+
+// ── Display OLED I2C (#38) ────────────────────────────────────────────────────
+// #define OLED_ENABLED 1
+// #define OLED_SDA 8
+// #define OLED_SCL 9
+
+// ── GPS UART (#37) ────────────────────────────────────────────────────────────
+// #define GPS_ENABLED 1
+// #define GPS_RX 16
+// #define GPS_TX 17
+
+// ── Karma — SSIDs na lista negra (nunca responder) ───────────────────────────
+// Operadoras e redes corporativas sensíveis — evita atenção desnecessária
+#define KARMA_BLACKLIST \
+    "eduroam", "govwifi", "Eduroam", \
+    "Claro", "TIM", "Vivo", "Oi", "NET", \
+    "AndroidAP", "iPhone", "Hotspot"
+
+// ── Deauth Stealth (#21) ──────────────────────────────────────────────────────
+#define DEAUTH_STEALTH_MIN_MS  200   // intervalo mínimo aleatório entre rajadas
+#define DEAUTH_STEALTH_MAX_MS 2000   // intervalo máximo aleatório entre rajadas
+
 // ── Driver USB RTL8188EU/CUS (adaptador WiFi via USB OTG) ─────────────────────
 // Conecte um adaptador RTL8188EU ou RTL8188CUS no conector USB-C esquerdo (OTG).
 // Chips testados: RTL8188EU (TL-WN722N v1, Alfa AWUS036NHR), RTL8188CUS

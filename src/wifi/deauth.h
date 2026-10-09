@@ -14,6 +14,8 @@ public:
     bool     autoCapture   = false;
     uint32_t framesSent    = 0;
     uint8_t  intensity     = 1;  // 0=suave, 1=normal, 2=agressivo
+    bool     stealthMode   = false; // intervalo aleatório entre bursts (#21)
+    unsigned long _nextBurst = 0;   // timestamp do próximo burst em modo stealth
 
     // Modos especiais
     bool pmfBypass       = false; // SA Query flood para APs com 802.11w
@@ -102,6 +104,14 @@ public:
 
     void tick() {
         if (!running) return;
+        // Stealth: respeita intervalo aleatório entre bursts (#21)
+        if (stealthMode) {
+            unsigned long now = millis();
+            if (now < _nextBurst) return;
+            uint32_t delay = DEAUTH_STEALTH_MIN_MS +
+                             (esp_random() % (DEAUTH_STEALTH_MAX_MS - DEAUTH_STEALTH_MIN_MS));
+            _nextBurst = now + delay;
+        }
         if (multiMode) _tickMulti();
         else           _tickSingle();
     }

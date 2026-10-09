@@ -53,6 +53,15 @@ public:
                  " | SSIDs conhecidos: " + String(knownSSIDs.size()));
     }
 
+    // Verifica se SSID está na blacklist (config.h KARMA_BLACKLIST)
+    static bool isBlacklisted(const char* ssid) {
+        if (!ssid || !*ssid) return false;
+        static const char* _bl[] = { KARMA_BLACKLIST, nullptr };
+        for (int i = 0; _bl[i]; i++)
+            if (strcasecmp(ssid, _bl[i]) == 0) return true;
+        return false;
+    }
+
     void onProbe(const uint8_t* clientMac, const char* ssid, uint8_t ch) {
         if (!running) return;
         // Ignora probes originados pelo próprio ESP32
@@ -61,6 +70,8 @@ public:
         esp_wifi_get_mac(WIFI_IF_STA, staMac);
         if (memcmp(clientMac, apMac,  6) == 0) return;
         if (memcmp(clientMac, staMac, 6) == 0) return;
+        // Blacklist: nunca responder a SSIDs sensíveis (#19)
+        if (isBlacklisted(ssid)) return;
 
         // Acumula SSIDs conhecidos (usado pelo MANA e pelo Wifite)
         if (ssid && strlen(ssid) > 0) {

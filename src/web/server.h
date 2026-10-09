@@ -22,6 +22,14 @@
 #include "../wifi/hidden_scanner.h"
 #include "../wifi/wifite_mode.h"
 #include "../wifi/led_attack.h"
+#include "../utils/oui.h"
+#include "../utils/capture_store.h"
+#include "../utils/channel_map.h"
+#include "../utils/session.h"
+#include "../utils/ota.h"
+#ifdef BATTERY_PIN
+#include "../utils/battery.h"
+#endif
 
 class WebServer {
 public:
@@ -36,7 +44,10 @@ public:
         _setupWiFiAP();
         _setupWebSocket();
         _setupRoutes();
+        OTAManager::get().registerRoutes(server);
         server.begin();
+        SessionMgr::get().begin();
+        CaptureStore::get().begin();
         LOG.success("Web server ativo → http://" + WiFi.softAPIP().toString());
     }
 
@@ -139,6 +150,11 @@ private:
         doc["hidden_scan"]    = HiddenScanner::get().running;
         doc["hidden_count"]   = (int)HiddenScanner::get().revealed.size();
         doc["hidden_targets"] = (int)HiddenScanner::get().targets.size();
+        doc["captures"]       = CaptureStore::get().captureCount();
+        doc["best_channel"]   = ChannelMap::get().bestFreeChannel();
+#ifdef BATTERY_PIN
+        doc["batt_pct"]       = BatteryMonitor::get().percent();
+#endif
     }
 
     void _setupRoutes() {
@@ -263,9 +279,16 @@ private:
             if (!doc["nullFrames"].isNull())  d.nullFrames  = doc["nullFrames"]  | true;
             if (!doc["pmfBypass"].isNull())   d.pmfBypass   = doc["pmfBypass"]   | false;
             if (!doc["assocFlood"].isNull())  d.assocFlood  = doc["assocFlood"]  | false;
+            if (!doc["stealth"].isNull())     d.stealthMode = doc["stealth"]     | false;
+            if (!doc["csaMode"].isNull())     d.csaMode     = doc["csaMode"]     | false;
+            if (!doc["csaChannel"].isNull())  d.csaChannel  = doc["csaChannel"]  | 13;
+            if (!doc["eapFlood"].isNull())    d.eapFlood    = doc["eapFlood"]    | false;
+            if (!doc["tkip"].isNull())        d.tkipInjection = doc["tkip"]      | false;
+            if (!doc["reconnectBlock"].isNull()) d.reconnectBlock = doc["reconnectBlock"] | false;
             LOG.info("[DEAUTH] Opções: null=" + String(d.nullFrames) +
                      " pmf=" + String(d.pmfBypass) +
-                     " assoc=" + String(d.assocFlood));
+                     " assoc=" + String(d.assocFlood) +
+                     " stealth=" + String(d.stealthMode));
             req->send(200, "application/json", "{\"ok\":true}");
         });
 
@@ -450,6 +473,11 @@ private:
         server.on("/api/blespam/stop", HTTP_POST, [](AsyncWebServerRequest* req) {
             BLESpam::get().stop();
             req->send(200,"application/json","{\"ok\":true}");
+        });
+        // Modo interferência BT (#BT_JAM) — satura advertisement channels BLE
+        server.on("/api/blespam/interfere", HTTP_POST, [](AsyncWebServerRequest* req) {
+            BLESpam::get().start(BLESpam::MODE_INTERFERE);
+            req->send(200,"application/json","{\"ok\":true,\"mode\":\"interfere\"}");
         });
 
         // ── Target Intelligence ───────────────────────────────────────────────
@@ -877,6 +905,92 @@ private:
                 req->client()->remoteIP().toString()
             );
             req->send(200,"application/json","{\"ok\":true}");
+        });
+
+        // ── Session / Auth com token (#46) ───────────────────────────────────
+        _postJson("/api/auth", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            String pass = doc["pass"] | "";
+            String tok = SessionMgr::get().authenticate(pass);
+            if (tok.isEmpty()) {
+#if AUTODESTRUCT_TRIES > 0
+                static int _badTries = 0;
+                if (++_badTries >= AUTODESTRUCT_TRIES) {
+                    CaptureStore::get().wipeAll();
+                    _badTries = 0;
+                    LOG.warn("[AUTH] Auto-destruct ativado após " + String(AUTODESTRUCT_TRIES) + " tentativas falhas!");
+                }
+#endif
+                req->send(401, "application/json", "{\"ok\":false,\"msg\":\"Senha incorreta\"}");
+                return;
+            }
+            req->send(200, "application/json", "{\"ok\":true,\"token\":\"" + tok + "\"}");
+        });
+        server.on("/api/auth/validate", HTTP_GET, [](AsyncWebServerRequest* req) {
+            bool ok = SessionMgr::get().isAuthenticated(req);
+            req->send(ok ? 200 : 401, "application/json",
+                      ok ? "{\"ok\":true}" : "{\"ok\":false}");
+        });
+
+        // ── Captures (#44) ────────────────────────────────────────────────────
+        server.on("/api/captures/list", HTTP_GET, [](AsyncWebServerRequest* req) {
+            req->send(200, "application/json", CaptureStore::get().listJson());
+        });
+        server.on("/api/captures/wipe", HTTP_POST, [](AsyncWebServerRequest* req) {
+            CaptureStore::get().wipeAll();
+            req->send(200, "application/json", "{\"ok\":true}");
+        });
+        server.on("/api/captures/download", HTTP_GET, [](AsyncWebServerRequest* req) {
+            if (!req->hasParam("file")) {
+                req->send(400,"application/json","{\"ok\":false,\"msg\":\"Parametro 'file' ausente\"}");
+                return;
+            }
+            String fname = "/captures/" + req->getParam("file")->value();
+            if (!LittleFS.exists(fname)) {
+                req->send(404,"application/json","{\"ok\":false,\"msg\":\"Arquivo nao encontrado\"}");
+                return;
+            }
+            req->send(LittleFS, fname, "application/octet-stream", true);
+        });
+
+        // ── Channel Map (#42) ─────────────────────────────────────────────────
+        server.on("/api/channels", HTTP_GET, [](AsyncWebServerRequest* req) {
+            req->send(200, "application/json", ChannelMap::get().toJson());
+        });
+        server.on("/api/channels/best", HTTP_GET, [](AsyncWebServerRequest* req) {
+            uint8_t ch = ChannelMap::get().bestFreeChannel();
+            req->send(200, "application/json", "{\"ch\":" + String(ch) + "}");
+        });
+
+        // ── OUI Lookup (#11) ─────────────────────────────────────────────────
+        server.on("/api/oui", HTTP_GET, [](AsyncWebServerRequest* req) {
+            if (!req->hasParam("mac")) {
+                req->send(400,"application/json","{\"ok\":false}");
+                return;
+            }
+            String macStr = req->getParam("mac")->value();
+            uint8_t mac[6]; _parseMac(macStr.c_str(), mac);
+            const char* vendor = OUI::lookup(mac);
+            bool rnd = OUI::isRandomized(mac);
+            String j = "{\"vendor\":\"" + String(vendor) +
+                       "\",\"randomized\":" + String(rnd?"true":"false") + "}";
+            req->send(200, "application/json", j);
+        });
+
+#ifdef BATTERY_PIN
+        // ── Battery Status (#34) ──────────────────────────────────────────────
+        server.on("/api/battery", HTTP_GET, [](AsyncWebServerRequest* req) {
+            req->send(200, "application/json", BatteryMonitor::get().statusJson());
+        });
+#endif
+
+        // ── Deep Sleep (#35) ─────────────────────────────────────────────────
+        _postJson("/api/system/sleep", [](AsyncWebServerRequest* req, JsonDocument& doc) {
+            uint32_t secs = doc["seconds"] | 60;
+            req->send(200, "application/json",
+                      "{\"ok\":true,\"msg\":\"Dormindo por " + String(secs) + "s\"}");
+            delay(200);
+            esp_sleep_enable_timer_wakeup((uint64_t)secs * 1000000ULL);
+            esp_deep_sleep_start();
         });
 
         server.onNotFound([](AsyncWebServerRequest* req) {

