@@ -1,4 +1,4 @@
-# Ghost Predator - Guia Completo de Ataques
+﻿# Ghost Predator - Guia Completo de Ataques
 
 > **AVISO LEGAL**: Use exclusivamente em redes e dispositivos que voce possui ou tem autorizacao explicita e documentada para testar. Uso nao autorizado e crime (Lei 12.737/2012 no Brasil). Os autores nao se responsabilizam por uso indevido.
 
@@ -10,17 +10,18 @@
 2. [Packet Sniffer](#2-packet-sniffer)
 3. [Deauth Attack](#3-deauth-attack-desautenticacao-80211)
 4. [Evil Twin + Captive Portal](#4-evil-twin-ap-clone--captive-portal)
-5. [Beacon Flood](#5-beacon-flood-inundacao-de-redes-falsas)
-6. [Karma Attack](#6-karma-attack-armadilha-de-reconexao-automatica)
-7. [Reconnect Blocker](#7-reconnect-blocker-bloqueador-de-reconexao)
-8. [PMKID Fisher](#8-pmkid-fisher-captura-sem-cliente)
-9. [WPS Scanner](#9-wps-scanner)
-10. [Auto-Attack / Wifite Mode](#10-auto-attack--wifite-mode)
-11. [Nuclear Auto-Attack](#11-nuclear-auto-attack)
-12. [Target Intel](#12-target-intel-fingerprinting-de-dispositivos)
-13. [LED Panel Attack](#13-led-panel-attack)
-14. [BLE Scanner e Spam](#14-ble-scanner-e-spam)
-15. [Fluxos de Ataque Completos](#15-fluxos-de-ataque-completos)
+5. [**AP Clone** *(NOVO)*](#5-ap-clone-clonagem-fiel-de-redes)
+6. [Beacon Flood](#6-beacon-flood-inundacao-de-redes-falsas)
+7. [Karma Attack](#7-karma-attack-armadilha-de-reconexao-automatica)
+8. [Reconnect Blocker](#8-reconnect-blocker-bloqueador-de-reconexao)
+9. [PMKID Fisher](#9-pmkid-fisher-captura-sem-cliente)
+10. [WPS Scanner](#10-wps-scanner)
+11. [Auto-Attack / Wifite Mode](#11-auto-attack--wifite-mode)
+12. [Nuclear Auto-Attack](#12-nuclear-auto-attack)
+13. [Target Intel](#13-target-intel-fingerprinting-de-dispositivos)
+14. [LED Panel Attack](#14-led-panel-attack)
+15. [BLE Scanner e Spam](#15-ble-scanner-e-spam)
+16. [Fluxos de Ataque Completos](#16-fluxos-de-ataque-completos)
 
 ---
 
@@ -48,9 +49,9 @@ Preste atencao no **RSSI**. Redes com sinal abaixo de -80 dBm vao ser muito difi
 ### API:
 
 ```
-GET  /api/wifi/scan          → inicia scan e retorna lista de redes
-GET  /api/wifi/clients       → lista clientes detectados por rede
-GET  /api/wifi/scan/status   → status do scan em andamento
+GET  /api/wifi/scan          â†’ inicia scan e retorna lista de redes
+GET  /api/wifi/clients       â†’ lista clientes detectados por rede
+GET  /api/wifi/scan/status   â†’ status do scan em andamento
 ```
 
 **Resposta de exemplo:**
@@ -98,14 +99,14 @@ O sniffer pode ficar fixo em um canal ou fazer **channel hopping**: pular entre 
 ### API:
 
 ```
-POST /api/sniffer/start               → inicia sniffer (channel hop ativo por padrao)
-POST /api/sniffer/stop                → para sniffer
-POST /api/sniffer/channel             → fixa em um canal especifico
+POST /api/sniffer/start               â†’ inicia sniffer (channel hop ativo por padrao)
+POST /api/sniffer/stop                â†’ para sniffer
+POST /api/sniffer/channel             â†’ fixa em um canal especifico
   { "channel": 6 }
-POST /api/sniffer/hop                 → volta ao channel hopping
-GET  /api/sniffer/handshakes          → lista handshakes EAPOL capturados
-GET  /api/sniffer/pmkids              → lista PMKIDs capturados
-GET  /api/sniffer/probes              → lista probe requests capturados
+POST /api/sniffer/hop                 â†’ volta ao channel hopping
+GET  /api/sniffer/handshakes          â†’ lista handshakes EAPOL capturados
+GET  /api/sniffer/pmkids              â†’ lista PMKIDs capturados
+GET  /api/sniffer/probes              â†’ lista probe requests capturados
 ```
 
 ### Como usar o handshake capturado (cracking offline):
@@ -161,8 +162,8 @@ O protocolo WiFi (IEEE 802.11) foi criado nos anos 90 sem autenticacao nos pacot
 
 | Tecnica | Como funciona | Quando usar |
 |---------|--------------|-------------|
-| **Deauth AP→Cliente** | Finge ser o roteador expulsando o cliente | Caso mais comum, funciona na maioria das redes |
-| **Deauth Cliente→AP** | Finge ser o cliente pedindo desconexao ao roteador | Complementar ao anterior, em redes com filtragem parcial |
+| **Deauth APâ†’Cliente** | Finge ser o roteador expulsando o cliente | Caso mais comum, funciona na maioria das redes |
+| **Deauth Clienteâ†’AP** | Finge ser o cliente pedindo desconexao ao roteador | Complementar ao anterior, em redes com filtragem parcial |
 | **Disassociation** | Variante mais agressiva (nivel de protocolo diferente, subtipo 0x0A) | Quando deauth normal nao surte efeito |
 | **16 Reason Codes** | Rotaciona entre todos os 16 motivos oficiais do protocolo IEEE | Dificultar deteccao por IDS/WIDS |
 | **Null Data Frame (PM=1)** | Finge que o cliente entrou em modo de economia de energia, fazendo o AP guardar pacotes e parar de entrega-los | Ataque silencioso, menos detectavel |
@@ -200,7 +201,7 @@ POST /api/deauth/start
 POST /api/deauth/stop
 
 GET  /api/deauth/status
-→ { "running": true, "sent": 1247, "fps": 89, "elapsed": 14 }
+â†’ { "running": true, "sent": 1247, "fps": 89, "elapsed": 14 }
 ```
 
 **Parametros:**
@@ -235,29 +236,29 @@ Cria uma copia identica de uma rede WiFi real (mesmo nome, mesma aparencia) mas 
 ### Fluxo completo do ataque:
 
 ```
-╔══════════════════════════════════════════════════════════╗
-║  ETAPA 1 - RECONHECIMENTO                                ║
-║  Scanner identifica: SSID, BSSID, canal, clientes        ║
-╠══════════════════════════════════════════════════════════╣
-║  ETAPA 2 - DEAUTH (derruba a rede real)                  ║
-║  Ghost Predator → [pacotes deauth] → Clientes            ║
-║  Resultado: todos os dispositivos sao desconectados      ║
-╠══════════════════════════════════════════════════════════╣
-║  ETAPA 3 - CLONE AP (cria a rede falsa)                  ║
-║  Ghost Predator emite beacons com o mesmo SSID           ║
-║  sem senha, sinal forte                                  ║
-║  Resultado: dispositivos veem a "mesma" rede             ║
-╠══════════════════════════════════════════════════════════╣
-║  ETAPA 4 - CONEXAO DO ALVO                               ║
-║  Dispositivo conecta automaticamente ao AP falso         ║
-║  Recebe IP do DHCP do Ghost Predator                     ║
-║  DNS do dispositivo aponta para o Ghost Predator         ║
-╠══════════════════════════════════════════════════════════╣
-║  ETAPA 5 - CAPTIVE PORTAL (pagina falsa)                 ║
-║  Qualquer site HTTP → redirecionado para portal falso    ║
-║  Pagina pede a senha do WiFi para "reconectar"           ║
-║  Senha digitada → aparece no painel em tempo real        ║
-╚══════════════════════════════════════════════════════════╝
+â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+â•‘  ETAPA 1 - RECONHECIMENTO                                â•‘
+â•‘  Scanner identifica: SSID, BSSID, canal, clientes        â•‘
+â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
+â•‘  ETAPA 2 - DEAUTH (derruba a rede real)                  â•‘
+â•‘  Ghost Predator â†’ [pacotes deauth] â†’ Clientes            â•‘
+â•‘  Resultado: todos os dispositivos sao desconectados      â•‘
+â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
+â•‘  ETAPA 3 - CLONE AP (cria a rede falsa)                  â•‘
+â•‘  Ghost Predator emite beacons com o mesmo SSID           â•‘
+â•‘  sem senha, sinal forte                                  â•‘
+â•‘  Resultado: dispositivos veem a "mesma" rede             â•‘
+â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
+â•‘  ETAPA 4 - CONEXAO DO ALVO                               â•‘
+â•‘  Dispositivo conecta automaticamente ao AP falso         â•‘
+â•‘  Recebe IP do DHCP do Ghost Predator                     â•‘
+â•‘  DNS do dispositivo aponta para o Ghost Predator         â•‘
+â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
+â•‘  ETAPA 5 - CAPTIVE PORTAL (pagina falsa)                 â•‘
+â•‘  Qualquer site HTTP â†’ redirecionado para portal falso    â•‘
+â•‘  Pagina pede a senha do WiFi para "reconectar"           â•‘
+â•‘  Senha digitada â†’ aparece no painel em tempo real        â•‘
+â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 ```
 
 ### Por que o redirecionamento funciona:
@@ -289,7 +290,7 @@ POST /api/eviltwin/start
 POST /api/eviltwin/stop
 
 GET  /api/eviltwin/creds
-→ [{ "password": "senha123", "timestamp": "14:32:11", "client": "AA:BB:CC:DD:EE:FF" }]
+â†’ [{ "password": "senha123", "timestamp": "14:32:11", "client": "AA:BB:CC:DD:EE:FF" }]
 ```
 
 **Dicas:**
@@ -299,7 +300,80 @@ GET  /api/eviltwin/creds
 
 ---
 
-## 5. Beacon Flood (Inundacao de Redes Falsas)
+## 5. AP Clone (Clonagem Fiel de Redes)
+
+### O que e?
+
+O AP Clone vai muito alem do Evil Twin tradicional. Em vez de criar um AP parecido, ele **copia com fidelidade absoluta** o AP alvo: mesmo BSSID (endereco MAC), mesmos parametros de seguranca (WPA2/WPA3), mesmos indicadores de velocidade (N/AC), mesmos dados de fabricante. O dispositivo deixa de ser reconhecivel como diferente do AP original.
+
+### A diferenca do Evil Twin comum:
+
+| Caracteristica | Evil Twin Comum | AP Clone (novo) |
+|---|---|---|
+| SSID | Igual | Igual |
+| BSSID (MAC) | Diferente â€” detectavel! | **Identico ao alvo** |
+| Seguranca WPA2 | Generica | **IEs exatos copiados** |
+| Beacon interval | 100ms padrao | **Igual ao AP real** |
+| Capacidades HT/VHT | Nao incluidas | **Copiadas do alvo** |
+| Detectavel por apps | Sim | Muito mais dificil |
+
+### Como funciona passo a passo:
+
+```
+1. Sniffer captura beacons do AR real (automatico, em background)
+   - Extrai: SSID, BSSID, canal, capabilities, todos os IEs
+   - Identifica: WPA2/WPA3, HT (N), VHT (AC), PMF, vendor IEs
+
+2. AP Clone: BSSID Spoof
+   - esp_wifi_set_mac(WIFI_IF_AP, bssid_alvo)
+   - O ESP32 passa a ter o MAC EXATO do roteador alvo
+   - Clientes associam ao nosso AP sem perceber diferenca
+
+3. Beacon Replay
+   - Injeta beacons continuos com os IEs EXATOS do alvo
+   - Mesmo timestamp progressivo, mesmo beacon interval
+   - Clientes veem nosso AP como identico ao real
+
+4. CSA (Channel Switch Announcement)
+   - Opcional: envia frames ordenando clientes do AP real
+     a migrarem para o nosso canal
+   - Combina com Deauth para migrar todos os clientes
+
+5. Captive Portal
+   - Clientes conectados sao redirecionados para portal
+   - Captura credenciais WiFi
+```
+
+### Novos modos do Deauth (v5):
+
+| Modo | Flag | O que faz |
+|------|------|-----------|
+| **CSA Attack** | `csaMode` | Channel Switch Announcement â€” move clientes para nosso canal |
+| **EAP Flood** | `eapFlood` | Manda EAP Identity Requests falsos â€” confunde autenticadores |
+| **TKIP MIC** | `tkipInjection` | Reporta falha MIC falsa â€” aciona blackout de 60s em WPA-TKIP |
+
+### Fingerprinting de dispositivos (novo no Sniffer):
+
+O sniffer agora analisa os IEs dentro de cada Probe Request para identificar o tipo de dispositivo:
+
+- **Apple**: presenca de Vendor IE com OUI `00:17:F2`
+- **Windows**: Vendor IE com OUI `00:50:F2` tipo 4 (WCN)
+- **Wi-Fi 6**: HE Capabilities (IEEE 802.11ax) presente
+- **MAC aleatorio**: bit U/L = 1 no primeiro octeto (privacidade do iOS/Android)
+
+### API:
+
+```
+GET  /api/clone/list            â†’ lista beacons capturados pelo sniffer
+POST /api/clone/start           â†’ inicia clone de AP (idx = indice da lista)
+POST /api/clone/stop            â†’ para o clone e restaura AP gerencial
+POST /api/clone/csa             â†’ envia CSA forcando migracao de clientes
+GET  /api/clone/status          â†’ status atual do clone
+```
+
+---
+
+## 6. Beacon Flood (Inundacao de Redes Falsas)
 
 ### O que e?
 
@@ -344,12 +418,12 @@ POST /api/beacon/start
 POST /api/beacon/stop
 
 GET  /api/beacon/status
-→ { "running": true, "sent": 4821, "ssids": 4, "channel": 9 }
+â†’ { "running": true, "sent": 4821, "ssids": 4, "channel": 9 }
 ```
 
 ---
 
-## 6. Karma Attack (Armadilha de Reconexao Automatica)
+## 7. Karma Attack (Armadilha de Reconexao Automatica)
 
 ### O que e?
 
@@ -365,21 +439,21 @@ Dispositivos WiFi com "Conexao automatica" ativada (que e o padrao em 100% dos s
 
 ```
 1. Seu celular (WiFi ligado, tela bloqueada) envia automaticamente:
-   → "MinhaRedeEmpresa, voce esta ai?"
-   → "WiFi_Casa, voce esta ai?"
-   → "AeroportoFree, voce esta ai?"
+   â†’ "MinhaRedeEmpresa, voce esta ai?"
+   â†’ "WiFi_Casa, voce esta ai?"
+   â†’ "AeroportoFree, voce esta ai?"
    (isso acontece em segundo plano, sem voce saber)
 
 2. O Ghost Predator ouve em modo monitor e captura esses probes
 
 3. Para cada probe, responde imediatamente:
-   → "Sim! Sou a MinhaRedeEmpresa. Conecte-se!" (com o mesmo SSID pedido)
+   â†’ "Sim! Sou a MinhaRedeEmpresa. Conecte-se!" (com o mesmo SSID pedido)
 
 4. O celular acredita e inicia conexao automatica (sem voce fazer nada)
 
 5. O celular esta conectado ao Ghost Predator
-   → Trafego HTTP pode ser capturado
-   → Portal captive pode ser exibido para coletar senha
+   â†’ Trafego HTTP pode ser capturado
+   â†’ Portal captive pode ser exibido para coletar senha
 ```
 
 ### Modo MANA (Karma Avancado):
@@ -418,30 +492,30 @@ POST /api/karma/start
 POST /api/karma/stop
 
 GET  /api/karma/responded
-→ [{ "ssid": "Empresa_WiFi", "client": "AA:BB:CC:DD:EE:FF", "time": "14:55:02" }]
+â†’ [{ "ssid": "Empresa_WiFi", "client": "AA:BB:CC:DD:EE:FF", "time": "14:55:02" }]
 
 GET  /api/karma/probes
-→ lista de todos os SSIDs que dispositivos proximos estao buscando
+â†’ lista de todos os SSIDs que dispositivos proximos estao buscando
 ```
 
 ---
 
-## 7. Reconnect Blocker (Bloqueador de Reconexao)
+## 8. Reconnect Blocker (Bloqueador de Reconexao)
 
 ### O que e?
 
-Impede que um dispositivo se reconecte a rede real apos ser deautenticado. E um "bloqueio persistente" que mantém o alvo desconectado mesmo quando ele tenta voltar.
+Impede que um dispositivo se reconecte a rede real apos ser deautenticado. E um "bloqueio persistente" que mantÃ©m o alvo desconectado mesmo quando ele tenta voltar.
 
 ### Como funciona:
 
 Quando um celular e deautenticado, ele envia probe requests perguntando pela rede real. O Reconnect Blocker intercepta essas perguntas e responde com uma **probe response falsa**: usa o SSID correto mas um MAC de roteador diferente (gerado via FNV-1a XOR'd com o contador de sequencia). O celular tenta conectar com esse MAC errado, falha, e fica em loop.
 
 ```
-Celular → "MinhaRede, voce esta ai?"
-Ghost Predator → "Sim! [SSID: MinhaRede | MAC: AA:BB:CC:DD:EE:01]" (MAC errado)
-Celular → tenta conectar com MAC AA:BB:CC:DD:EE:01 → falha
-Celular → "MinhaRede, voce esta ai?"  (tenta de novo)
-Ghost Predator → "Sim! [SSID: MinhaRede | MAC: AA:BB:CC:DD:EE:02]" (outro MAC errado)
+Celular â†’ "MinhaRede, voce esta ai?"
+Ghost Predator â†’ "Sim! [SSID: MinhaRede | MAC: AA:BB:CC:DD:EE:01]" (MAC errado)
+Celular â†’ tenta conectar com MAC AA:BB:CC:DD:EE:01 â†’ falha
+Celular â†’ "MinhaRede, voce esta ai?"  (tenta de novo)
+Ghost Predator â†’ "Sim! [SSID: MinhaRede | MAC: AA:BB:CC:DD:EE:02]" (outro MAC errado)
 ... loop infinito ...
 ```
 
@@ -468,7 +542,7 @@ POST /api/deauth/start
 
 ---
 
-## 8. PMKID Fisher (Captura Sem Cliente)
+## 9. PMKID Fisher (Captura Sem Cliente)
 
 ### O que e?
 
@@ -486,11 +560,11 @@ Captura o PMKID de um AP sem precisar que nenhum cliente esteja conectado. O PMK
 ### Como funciona:
 
 ```
-Ghost Predator → [Authentication Request] → AP
-AP             → [Authentication Response] → Ghost Predator
-Ghost Predator → [Association Request] → AP
-AP             → [Association Response + RSNIE contendo PMKID] → Ghost Predator
-                                          ↑ PMKID extraido aqui!
+Ghost Predator â†’ [Authentication Request] â†’ AP
+AP             â†’ [Authentication Response] â†’ Ghost Predator
+Ghost Predator â†’ [Association Request] â†’ AP
+AP             â†’ [Association Response + RSNIE contendo PMKID] â†’ Ghost Predator
+                                          â†‘ PMKID extraido aqui!
 ```
 
 O PMKID e derivado assim pela matematica do protocolo:
@@ -542,14 +616,14 @@ POST /api/pmkid/start
 POST /api/pmkid/stop
 
 GET  /api/pmkid/results
-→ [{ "ssid": "MinhaRede", "bssid": "AA:BB:CC:DD:EE:FF", "pmkid": "abc123...", "hashcat": "..." }]
+â†’ [{ "ssid": "MinhaRede", "bssid": "AA:BB:CC:DD:EE:FF", "pmkid": "abc123...", "hashcat": "..." }]
 
-GET  /api/pmkid/export   → arquivo .hc22000 pronto para hashcat
+GET  /api/pmkid/export   â†’ arquivo .hc22000 pronto para hashcat
 ```
 
 ---
 
-## 9. WPS Scanner
+## 10. WPS Scanner
 
 ### O que e WPS?
 
@@ -573,13 +647,13 @@ WPS (Wi-Fi Protected Setup) foi criado para facilitar a conexao de dispositivos 
 ### API:
 
 ```
-POST /api/wps/scan      → escaneia APs com WPS ativo
-GET  /api/wps/results   → lista APs vulneraveis detectados
+POST /api/wps/scan      â†’ escaneia APs com WPS ativo
+GET  /api/wps/results   â†’ lista APs vulneraveis detectados
 ```
 
 ---
 
-## 10. Auto-Attack / Wifite Mode
+## 11. Auto-Attack / Wifite Mode
 
 ### O que e?
 
@@ -588,25 +662,25 @@ Automacao completa da auditoria WiFi. Inspirado no Wifite (ferramenta classica d
 ### Fluxo automatico para cada rede:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ Para CADA rede WPA2 no scan (ordenadas por RSSI):           │
-│                                                             │
-│  ┌─ TENTATIVA 1: PMKID Fisher (padrao: 30s)                │
-│  │  Tenta capturar PMKID sem precisar de clientes           │
-│  │  ✓ Sucesso → salva, vai para PROXIMA rede               │
-│  │  ✗ Falhou  → vai para tentativa 2                        │
-│  │                                                          │
-│  ├─ TENTATIVA 2: Deauth + Handshake (padrao: 60s)          │
-│  │  Expulsa clientes, aguarda reconexao, captura handshake  │
-│  │  ✓ Sucesso → salva, vai para PROXIMA rede               │
-│  │  ✗ Falhou  → vai para tentativa 3                        │
-│  │  (falha se nao tiver clientes conectados)                │
-│  │                                                          │
-│  └─ TENTATIVA 3: Evil Twin (padrao: 120s)                   │
-│     Clone AP + Deauth + Portal Captive                      │
-│     ✓ Sucesso → salva senha, vai para PROXIMA rede         │
-│     ✗ Falhou  → marca como "nao capturada", proxima        │
-└─────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ Para CADA rede WPA2 no scan (ordenadas por RSSI):           â”‚
+â”‚                                                             â”‚
+â”‚  â”Œâ”€ TENTATIVA 1: PMKID Fisher (padrao: 30s)                â”‚
+â”‚  â”‚  Tenta capturar PMKID sem precisar de clientes           â”‚
+â”‚  â”‚  âœ“ Sucesso â†’ salva, vai para PROXIMA rede               â”‚
+â”‚  â”‚  âœ— Falhou  â†’ vai para tentativa 2                        â”‚
+â”‚  â”‚                                                          â”‚
+â”‚  â”œâ”€ TENTATIVA 2: Deauth + Handshake (padrao: 60s)          â”‚
+â”‚  â”‚  Expulsa clientes, aguarda reconexao, captura handshake  â”‚
+â”‚  â”‚  âœ“ Sucesso â†’ salva, vai para PROXIMA rede               â”‚
+â”‚  â”‚  âœ— Falhou  â†’ vai para tentativa 3                        â”‚
+â”‚  â”‚  (falha se nao tiver clientes conectados)                â”‚
+â”‚  â”‚                                                          â”‚
+â”‚  â””â”€ TENTATIVA 3: Evil Twin (padrao: 120s)                   â”‚
+â”‚     Clone AP + Deauth + Portal Captive                      â”‚
+â”‚     âœ“ Sucesso â†’ salva senha, vai para PROXIMA rede         â”‚
+â”‚     âœ— Falhou  â†’ marca como "nao capturada", proxima        â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Configuracoes:
@@ -642,12 +716,12 @@ POST /api/wifite/start
 POST /api/wifite/stop
 
 GET  /api/wifite/status
-→ { "current": "MinhaRede", "phase": "deauth", "progress": [...] }
+â†’ { "current": "MinhaRede", "phase": "deauth", "progress": [...] }
 ```
 
 ---
 
-## 11. Nuclear Auto-Attack
+## 12. Nuclear Auto-Attack
 
 ### O que e?
 
@@ -683,7 +757,7 @@ POST /api/nuclear/start
 POST /api/nuclear/stop
 
 GET  /api/nuclear/status
-→ {
+â†’ {
     "sniffer": { "handshakes": 3, "pmkids": 7 },
     "deauth": { "sent": 4821, "networks": 5 },
     "karma": { "clients": 2, "probes": 47 }
@@ -692,7 +766,7 @@ GET  /api/nuclear/status
 
 ---
 
-## 12. Target Intel (Fingerprinting de Dispositivos)
+## 13. Target Intel (Fingerprinting de Dispositivos)
 
 ### O que e?
 
@@ -718,7 +792,7 @@ POST /api/intel/start
 }
 
 GET  /api/intel/data
-→ {
+â†’ {
     "dns": ["google.com", "instagram.com", "api.whatsapp.com"],
     "useragent": "Mozilla/5.0 (Android 13; Samsung Galaxy S21)",
     "os": "Android",
@@ -728,7 +802,7 @@ GET  /api/intel/data
 
 ---
 
-## 13. LED Panel Attack
+## 14. LED Panel Attack
 
 ### O que e?
 
@@ -756,7 +830,7 @@ Fabricantes de produtos baratos priorizaram custo sobre seguranca. Os protocolos
 ### API:
 
 ```json
-POST /api/led/scan      → detecta controladores LED na rede
+POST /api/led/scan      â†’ detecta controladores LED na rede
 
 POST /api/led/attack
 {
@@ -768,7 +842,7 @@ POST /api/led/attack
 
 ---
 
-## 14. BLE Scanner e Spam
+## 15. BLE Scanner e Spam
 
 ### BLE Scanner
 
@@ -820,12 +894,12 @@ Detecta dispositivos Bluetooth Classic (BR/EDR) em modo discoverable (visiveis p
 ```
 POST /api/bt/scan
 GET  /api/bt/devices
-→ [{ "name": "Fone JBL", "class": "Audio", "rssi": -62 }]
+â†’ [{ "name": "Fone JBL", "class": "Audio", "rssi": -62 }]
 ```
 
 ---
 
-## 15. Fluxos de Ataque Completos
+## 16. Fluxos de Ataque Completos
 
 Exemplos de cenarios completos de auditoria do inicio ao fim.
 
@@ -837,25 +911,25 @@ Exemplos de cenarios completos de auditoria do inicio ao fim.
 
 ```
 Passo 1 - Reconhecimento
-  → WiFi Scanner
-  → Identificar rede-alvo: SSID, BSSID, canal, clientes conectados
-  → Confirmar sinal: RSSI acima de -70 dBm
+  â†’ WiFi Scanner
+  â†’ Identificar rede-alvo: SSID, BSSID, canal, clientes conectados
+  â†’ Confirmar sinal: RSSI acima de -70 dBm
 
 Passo 2 - Posicionar o sniffer
-  → Packet Sniffer → start
-  → Fixar no canal do alvo (nao usar hopping)
+  â†’ Packet Sniffer â†’ start
+  â†’ Fixar no canal do alvo (nao usar hopping)
 
 Passo 3 - Forccar reconexao
-  → Deauth Attack → start (broadcast ou cliente especifico)
-  → Aguardar 10-30 segundos
+  â†’ Deauth Attack â†’ start (broadcast ou cliente especifico)
+  â†’ Aguardar 10-30 segundos
 
 Passo 4 - Verificar captura
-  → Sniffer → ver handshakes capturados
-  → Deve aparecer EAPOL M1, M2, M3, M4 do alvo
+  â†’ Sniffer â†’ ver handshakes capturados
+  â†’ Deve aparecer EAPOL M1, M2, M3, M4 do alvo
 
 Passo 5 - Exportar e quebrar
-  → Export Hashcat → salvar .hc22000
-  → hashcat -m 22000 captura.hc22000 rockyou.txt
+  â†’ Export Hashcat â†’ salvar .hc22000
+  â†’ hashcat -m 22000 captura.hc22000 rockyou.txt
 ```
 
 ---
@@ -866,42 +940,42 @@ Passo 5 - Exportar e quebrar
 
 ```
 Passo 1 - Reconhecimento
-  → WiFi Scanner
-  → Identificar rede-alvo com WPA2
+  â†’ WiFi Scanner
+  â†’ Identificar rede-alvo com WPA2
 
 Passo 2 - PMKID Fisher
-  → PMKID Fisher → start com o AP selecionado
-  → Aguardar 10-30 segundos (geralmente e imediato)
+  â†’ PMKID Fisher â†’ start com o AP selecionado
+  â†’ Aguardar 10-30 segundos (geralmente e imediato)
 
 Passo 3 - Exportar e quebrar
-  → Se capturou: Export Hashcat
-  → hashcat -m 22000 pmkid.hc22000 rockyou.txt -r best64.rule
+  â†’ Se capturou: Export Hashcat
+  â†’ hashcat -m 22000 pmkid.hc22000 rockyou.txt -r best64.rule
 ```
 
 ---
 
 ### Fluxo C - Capturar senha via portal (usuario digita a senha)
 
-**Objetivo**: Enganar o usuario para que ele mesmo forneça a senha.
+**Objetivo**: Enganar o usuario para que ele mesmo forneÃ§a a senha.
 
 ```
 Passo 1 - Reconhecimento
-  → WiFi Scanner
-  → Identificar rede-alvo, canal e clientes
+  â†’ WiFi Scanner
+  â†’ Identificar rede-alvo, canal e clientes
 
 Passo 2 - Evil Twin
-  → Selecionar rede-alvo
-  → Ativar Evil Twin com deauth ativado e template "reconnect"
-  → Aguardar clientes se conectarem (pode levar 1-5 minutos)
+  â†’ Selecionar rede-alvo
+  â†’ Ativar Evil Twin com deauth ativado e template "reconnect"
+  â†’ Aguardar clientes se conectarem (pode levar 1-5 minutos)
 
 Passo 3 - Monitorar
-  → Painel mostra clientes conectados ao AP falso em tempo real
-  → Quando o usuario tentar acessar qualquer site, vê o portal
-  → Ao digitar a senha, ela aparece instantaneamente no painel
+  â†’ Painel mostra clientes conectados ao AP falso em tempo real
+  â†’ Quando o usuario tentar acessar qualquer site, vÃª o portal
+  â†’ Ao digitar a senha, ela aparece instantaneamente no painel
 
 Passo 4 - Finalizar
-  → Stop Evil Twin
-  → Credenciais ficam salvas no painel
+  â†’ Stop Evil Twin
+  â†’ Credenciais ficam salvas no painel
 ```
 
 ---
@@ -912,15 +986,15 @@ Passo 4 - Finalizar
 
 ```
 Opcao 1 - Automatica (recomendado):
-  → Nuclear Auto-Attack → start
-  → Aguardar 5-15 minutos
-  → Ver resultados: handshakes, PMKIDs, clientes Karma
+  â†’ Nuclear Auto-Attack â†’ start
+  â†’ Aguardar 5-15 minutos
+  â†’ Ver resultados: handshakes, PMKIDs, clientes Karma
 
 Opcao 2 - Manual sequencial:
-  → WiFi Scanner → identificar todas as redes
-  → PMKID Fisher → testar cada AP em sequencia (30s cada)
-  → Deauth + Sniffer → nas redes com clientes (60s cada)
-  → Karma Attack → ativo durante toda a auditoria para capturar dispositivos vagantes
+  â†’ WiFi Scanner â†’ identificar todas as redes
+  â†’ PMKID Fisher â†’ testar cada AP em sequencia (30s cada)
+  â†’ Deauth + Sniffer â†’ nas redes com clientes (60s cada)
+  â†’ Karma Attack â†’ ativo durante toda a auditoria para capturar dispositivos vagantes
 ```
 
 ---
@@ -931,16 +1005,16 @@ Opcao 2 - Manual sequencial:
 
 ```
 Passo 1 - Karma + MANA
-  → Karma Attack → start com MANA ativado
-  → O painel comeca a mostrar SSIDs que dispositivos estao buscando
+  â†’ Karma Attack â†’ start com MANA ativado
+  â†’ O painel comeca a mostrar SSIDs que dispositivos estao buscando
 
 Passo 2 - Monitorar capturas
-  → Quando um dispositivo conectar, aparece no painel
-  → Portal captive e exibido automaticamente
+  â†’ Quando um dispositivo conectar, aparece no painel
+  â†’ Portal captive e exibido automaticamente
 
 Passo 3 - Coletar credenciais
-  → Usuario ve portal, digita senha do WiFi
-  → Credencial aparece no painel
+  â†’ Usuario ve portal, digita senha do WiFi
+  â†’ Credencial aparece no painel
 ```
 
 ---
