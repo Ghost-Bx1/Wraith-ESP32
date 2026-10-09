@@ -4,6 +4,7 @@
 #include <vector>
 #include "../utils/logger.h"
 #include "scanner.h"
+#include "ap_clone.h"
 
 struct HandshakeCapture {
     String bssid, client;
@@ -38,7 +39,16 @@ struct ProbeRequest {
     uint8_t macRaw[6];
     uint8_t channel;
     unsigned long ts;
+    // Fingerprinting baseado nos IEs da probe request
+    bool randomizedMAC = false; // MAC localmente administrado (privacidade)
+    bool hasHT         = false; // 802.11n capable
+    bool hasVHT        = false; // 802.11ac capable
+    bool hasHE         = false; // 802.11ax (Wi-Fi 6) capable
+    uint8_t devType    = 0;     // 0=desconhecido,1=Apple,2=Android,3=Windows,4=Linux
 };
+
+// Tipo de dispositivo detectado via probe IEs
+static const char* const kDevTypeNames[] = {"?","Apple","Android","Windows","Linux"};
 
 class Sniffer {
 public:
@@ -160,6 +170,10 @@ private:
 
         if (ft == 0x00) {
             self.mgmtCount++;
+            // Beacon (subtype 8) e Probe Response (subtype 5) → alimenta APClone
+            if (fst == 0x08 || fst == 0x05) {
+                APClone::get().onBeacon(pkt->payload, len, rssi, ch);
+            }
             if (fst == 0x04) {
                 const uint8_t* body = pkt->payload + 24;
                 size_t blen = len > 24 ? len - 24 : 0;
@@ -182,6 +196,32 @@ private:
                 pr.ssid = ssid; pr.rssi = rssi;
                 pr.channel = ch; pr.ts = millis();
                 memcpy(pr.macRaw, hdr->a2, 6);
+                // MAC randomizado: bit U/L (bit1 do primeiro octeto) = 1
+                pr.randomizedMAC = (hdr->a2[0] & 0x02) != 0;
+
+                // Fingerprinting via IEs da probe request
+                {
+                    const uint8_t* pie = body + 2 + (blen >= 2 ? body[1] : 0);
+                    size_t rem = (blen >= 2 + body[1]) ? blen - 2 - body[1] : 0;
+                    size_t pi = 0;
+                    while (pi + 1 < rem) {
+                        uint8_t tid = pie[pi], tl = pie[pi+1];
+                        if (pi + 2 + tl > rem) break;
+                        if (tid == 45)  pr.hasHT  = true; // HT Capabilities
+                        if (tid == 191) pr.hasVHT = true; // VHT Capabilities
+                        if (tid == 255 && tl >= 1 && pie[pi+2] == 35) pr.hasHE = true; // HE (Wi-Fi 6)
+                        if (tid == 221 && tl >= 4) { // Vendor Specific
+                            // Apple: 00:17:F2 ou 00:50:F2 com type=4 (P2P)
+                            if (pie[pi+2]==0x00 && pie[pi+3]==0x17 && pie[pi+4]==0xF2)
+                                pr.devType = 1; // Apple
+                            // Microsoft: 00:50:F2 type=4 (WPS/WCN) - comum em Windows
+                            if (pie[pi+2]==0x00 && pie[pi+3]==0x50 && pie[pi+4]==0xF2 && tl>=5 && pie[pi+5]==0x04)
+                                pr.devType = 3; // Windows
+                        }
+                        pi += 2 + tl;
+                    }
+                }
+
                 // Deduplicação por MAC+SSID
                 bool dupProbe = false;
                 for (auto& ep : self.probes)
@@ -190,7 +230,11 @@ private:
                 WiFiScanner::get().addClient(hdr->a2, hdr->a3, rssi);
                 if (ssid.length() > 0) {
                     WiFiScanner::get().addClientProbe(pr.mac, ssid);
-                    LOG.data("[PROBE] " + pr.mac + " -> \"" + ssid + "\"");
+                    String fp = "";
+                    if (pr.devType > 0) fp += " [" + String(kDevTypeNames[pr.devType]) + "]";
+                    if (pr.randomizedMAC) fp += " [rndMAC]";
+                    if (pr.hasHE) fp += " [WiFi6]";
+                    LOG.data("[PROBE] " + pr.mac + fp + " -> \"" + ssid + "\"");
                     if (self.onProbe) self.onProbe(hdr->a2, ssid.c_str(), ch);
                 }
             }
