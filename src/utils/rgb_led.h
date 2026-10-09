@@ -26,6 +26,12 @@ public:
         _px.setBrightness(RGB_BRIGHTNESS);
         _px.clear();
         _px.show();
+        // Sequência de teste: R→G→B para confirmar que o pino é correto
+        // Se você não ver as 3 cores piscando, altere RGB_LED_PIN em config.h
+        _px.setPixelColor(0, _color(200, 0, 0)); _px.show(); delay(200);
+        _px.setPixelColor(0, _color(0, 200, 0)); _px.show(); delay(200);
+        _px.setPixelColor(0, _color(0, 0, 200)); _px.show(); delay(200);
+        _px.clear(); _px.show();
         setState(BOOT);
     }
 

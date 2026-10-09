@@ -42,10 +42,12 @@
 #define FISHER_TIMEOUT_MS 30000   // timeout por alvo no PMKID Fisher
 
 // ── LED RGB onboard WS2812B ────────────────────────────────────────────────────
-// ESP32-S3-WROOM-1-N16R8 (placa com 2x USB-C): GPIO 38
-// ESP32-S3 DevKitC-1 padrão Espressif:          GPIO 48
+// Se o LED não funcionar, altere RGB_LED_PIN para o outro valor:
+//   GPIO 48 → ESP32-S3 DevKitC-1 Espressif padrão
+//   GPIO 38 → Variantes customizadas N16R8 com 2x USB-C
+// Para descobrir qual é o seu: teste 48 primeiro, depois 38 se não funcionar.
 #ifdef ESP32_S3
-  #define RGB_LED_PIN    38       // WS2812B onboard — GPIO 38 (placa N16R8 2x USB-C)
+  #define RGB_LED_PIN    48       // WS2812B onboard — tente 38 se não funcionar
 #else
   #define RGB_LED_PIN    2        // fallback: LED simples em outros boards
 #endif
