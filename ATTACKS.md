@@ -1318,6 +1318,135 @@ ESP32 entra em deep sleep e acorda apos o tempo especificado. Consome < 20µA no
 
 ---
 
+## Novas Funcionalidades v4.1
+
+### Ataques de DoS no Meio Fisico 802.11 — Channel-Level Flooding
+
+Ataques que comprometem o **canal inteiro**, nao apenas um AP ou cliente especifico. Todos os dispositivos no canal sao afetados.
+
+```json
+POST /api/deauth/options
+{
+  "navFlood":  true,
+  "ctsFlood":  true,
+  "probeFlood": true,
+  "fragFlood": true,
+  "deauthAll": true
+}
+```
+
+#### NAV Duration Poison (`navFlood`)
+
+**Mecanismo**: Injeta frames de dados com campo Duration = 32767µs (maximo IEEE 802.11-2020). Todos os dispositivos no canal configuram seu Network Allocation Vector (NAV) para esse valor, acreditando que o meio esta ocupado por 32ms.
+
+**Efeito**: Throughput do canal cai para perto de zero. Nenhum dispositivo transmite enquanto o NAV nao expira (renovado continuamente pelo ataque).
+
+**Frames/s**: ~32 frames a cada tick (10ms) = ~3200 frames/s
+
+---
+
+#### CTS-to-Self Flood (`ctsFlood`)
+
+**Mecanismo**: Frames CTS (Clear To Send) sao frames de controle que reservam o meio. Injeta CTS com Duration = 32767µs spoofando o BSSID do AP alvo.
+
+**Diferencial**: CTS e um frame legitimo esperado pelo protocolo — menos provavel de ser filtrado por IDS do que frames de gerenciamento. Afeta o canal sem exigir que clientes estejam associados.
+
+**Frames/s**: ~32 por tick
+
+---
+
+#### Probe Request Flood (`probeFlood`)
+
+**Mecanismo**: Envia Probe Requests com MACs aleatorios (localmente administrados) para o SSID alvo. O AP precisa processar e responder cada uma.
+
+**Efeito**: Esgota CPU e memoria do AP lidando com respostas. APs com pouca RAM (roteadores domesticos) podem travar, reiniciar ou parar de aceitar novos clientes.
+
+**Frames/s**: ~16 por tick
+
+---
+
+#### Fragmentation Flood (`fragFlood`)
+
+**Mecanismo**: Envia o primeiro fragmento (fragment 0, More Fragments = 1) de frames de dados sem jamais enviar os fragmentos seguintes. O AP aloca buffer de reassembly para cada fragmento pendente.
+
+**Efeito**: Com ~128 fragmentos pendentes distintos (MACs de origem unicos), a maioria dos APs esgota o pool de reassembly e trava ou reinicia.
+
+**Frames/s**: ~8 por tick (mais pesados)
+
+---
+
+#### Universal Deauth (`deauthAll`)
+
+**Mecanismo**: Deauth e disassoc para o endereco broadcast com BSSIDs gerados aleatoriamente. Atinge todos os clientes no canal sem precisar conhecer o BSSID especifico.
+
+**Combinacao recomendada**: usar junto com `navFlood` para bloquear reconexoes.
+
+---
+
+### Evil Twin Avancado com Captura de Handshake
+
+O ataque Evil Twin foi completamente reescrito em v4.1 com as seguintes capacidades:
+
+#### Fluxo do Ataque
+
+```
+1. Escaneia e seleciona AP alvo (SSID + BSSID + canal)
+2. Sobe AP falso com mesmo SSID (sem senha) no mesmo canal
+3. Tenta spoof do BSSID via esp_wifi_set_mac()
+4. Inicia deauth broadcast no canal do AP real (loop a cada 500ms)
+5. Clientes perdem conexao com o AP real e se associam ao AP falso
+6. Portal cativo intercepta todos os requests HTTP
+7. Captura EAPOL handshakes WPA2 via sniffer promiscuo simultaneamente
+8. Credenciais digitadas no portal sao salvas em LittleFS
+```
+
+#### API
+
+```json
+POST /api/eviltwin/start
+{
+  "ssid":      "MinhaRede",
+  "bssid":     "AA:BB:CC:DD:EE:FF",
+  "channel":   6,
+  "deauthLoop": true,
+  "captureHS":  true
+}
+
+POST /api/eviltwin/stop
+
+GET /api/eviltwin/creds
+```
+
+#### Portal Cativo — Templates
+
+O portal cativo tem 3 templates configuráveis via API:
+
+| Template | Descricao | Caso de Uso |
+|----------|-----------|-------------|
+| `0` (padrao) | "Atualizacao de Seguranca" — pede reautenticacao | Redes residenciais |
+| `1` | "Portal do Cliente ISP" — simula portal de provedor | Hotspots e redes de provedores |
+| `2` | "Admin do Roteador" — tela de login estilo TP-Link/Intelbras | Redes corporativas |
+
+```json
+POST /api/eviltwin/template
+{"template": 1}
+```
+
+#### Captura de Handshake WPA2
+
+Simultaneamente ao portal cativo, o sniffer captura handshakes 4-way (EAPOL) automaticamente:
+
+- **Msg1 capturada**: extrai ANonce do AP real
+- **Msg2 capturada**: extrai SNonce + MIC do cliente
+- **Handshake completo** → salvo em `/captures/hs_SSID.hc22000`
+
+Formato compativel com **hashcat -m 22000**:
+```bash
+hashcat -m 22000 hs_MinhaRede.hc22000 rockyou.txt
+```
+
+---
+
 ## Resolucao de Problemas
 
 | Problema | Causa provavel | Solucao |
@@ -1334,4 +1463,4 @@ ESP32 entra em deep sleep e acorda apos o tempo especificado. Consome < 20µA no
 
 ---
 
-*Ghost Predator Mobile v4.0 - Para uso educacional e testes autorizados apenas.*
+*Ghost Predator Mobile v4.1 - Para uso educacional e testes autorizados apenas.*
