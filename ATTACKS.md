@@ -4,8 +4,94 @@
 
 ---
 
+## Hardware — ESP32-S3-WROOM-1-N16R8
+
+### Especificacoes da Placa
+
+| Componente | Especificacao |
+|-----------|---------------|
+| **Modulo** | ESP32-S3-WROOM-1-N16R8 |
+| **CPU** | Xtensa LX7 dual-core @ 240 MHz |
+| **Flash** | 8 MB (QIO) |
+| **PSRAM** | 8 MB OPI (integrada ao modulo) |
+| **WiFi** | 802.11 b/g/n 2.4 GHz com injecao de frames |
+| **Bluetooth** | BLE 5.0 + BT Classic |
+| **USB** | 2x USB-C (esquerdo = OTG Host, direito = CH343P serial) |
+| **Dimensoes** | 57.15 x 27.94 mm |
+
+### Componentes Onboard Utilizados
+
+| Componente | GPIO | Funcao no Ghost Predator |
+|-----------|------|--------------------------|
+| **WS2812 RGB LED** | GPIO 38 | Indicador visual de estado do sistema |
+| **Botao BOOT** | GPIO 0 | Pausar/retomar ataques; 2x cliques = scan rapido |
+| **Botao RST** | RST | Reiniciar o dispositivo |
+| **USB OTG** | GPIO19/20 | Conectar segundo radio via USB (modulo externo) |
+| **PWR LED** | — | Indica alimentacao ativa (sempre aceso) |
+| **TX/RX LEDs** | — | Atividade serial (piscam durante flash/debug) |
+
+### LED RGB — Significado das Cores
+
+O LED WS2812 no GPIO 38 indica o estado atual do sistema em tempo real:
+
+| Cor | Padrao | Estado |
+|-----|--------|--------|
+| **Branco** | Fade in (boot) | Inicializando o sistema |
+| **Azul** | Pulsando lento | Ocioso — aguardando comando |
+| **Ciano** | Piscando alternado | Sniffer ativo (capturando pacotes) |
+| **Vermelho** | Piscando rapido | Ataque em andamento (Deauth/Flood/Karma/PMKID/BLE Spam) |
+| **Roxo** | Pulsando | AP Clone ou Evil Twin ativos |
+| **Verde** | Flash rapido (4x) | Captura concluida (handshake, credencial, PMKID) |
+| **Laranja** | Flash lento (3x) | Erro ou ataque pausado manualmente |
+
+> O LED atualiza automaticamente — nenhuma configuracao necessaria.
+
+### Botao BOOT como Controle de Ataque
+
+- **1 clique**: Pausa todos os ataques ativos / retoma se ja pausado
+- **2 cliques rapidos**: Inicia scan rapido de redes
+- **Segurar durante power-on**: Entra em modo bootloader (para novo firmware)
+
+### Porta USB OTG — Segundo Radio
+
+O conector USB-C esquerdo e a porta USB OTG do ESP32-S3. Com ela voce pode:
+
+**Conectar um segundo modulo ESP32 como radio adicional:**
+```
+[ESP32-S3 N16R8]          [Segundo ESP32 — radio externo]
+  USB OTG (esq) ──USB-C──► USB-UART (CH340/CP2102)
+                             │
+                           GPIO → antena WiFi externa
+```
+
+1. Flash o segundo modulo com o firmware `ghost-radio-slave` (em `/tools/slave_firmware/`)
+2. Conecte via cabo USB-C ao conector OTG (esquerdo)
+3. Ative em `config.h`:
+   ```cpp
+   #define USB_RADIO_SERIAL  Serial1
+   #define USB_RADIO_BAUD    921600
+   #define USB_RADIO_TX      17
+   #define USB_RADIO_RX      18
+   ```
+4. O segundo radio aparecera no painel como "USB Radio" e pode executar ataques paralelos
+
+**Protocolo de comunicacao USB Radio:**
+
+| Comando | Codigo | Payload | Funcao |
+|---------|--------|---------|--------|
+| PING | 0x01 | — | Verifica presenca |
+| DEAUTH | 0x10 | BSSID[6]+CLI[6]+CH[1] | Deauth via segundo radio |
+| BEACON | 0x11 | SSID[32]+CH[1] | Beacon flood remoto |
+| SCAN | 0x20 | — | Scan de redes |
+| INJECT | 0x30 | LEN[2]+frame[] | Frame 802.11 bruto |
+| CHANNEL | 0x40 | CH[1] | Troca de canal |
+| STATUS | 0xF0 | — | JSON de status |
+
+---
+
 ## Sumario
 
+- [**Hardware — ESP32-S3-WROOM-1-N16R8**](#hardware--esp32-s3-wroom-1-n16r8) ← LED RGB, BOOT button, USB OTG
 1. [WiFi Scanner](#1-wifi-scanner)
 2. [Packet Sniffer](#2-packet-sniffer)
 3. [Deauth Attack](#3-deauth-attack-desautenticacao-80211)

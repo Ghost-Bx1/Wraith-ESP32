@@ -3,6 +3,7 @@
 #include <esp_wifi.h>
 #include <vector>
 #include "../utils/logger.h"
+#include "../utils/rgb_led.h"
 #include "scanner.h"
 #include "ap_clone.h"
 
@@ -297,10 +298,14 @@ private:
                     if (hs.type == 3) st->m3 = true;
                     if (hs.type == 4) st->m4 = true;
                     st->lastTs = millis();
-                    if (st->crackable() && hs.type <= 2)
+                    if (st->crackable() && hs.type <= 2) {
+                        RGBLed::get().flashFound();
                         LOG.success("[HS-CRACK] " + hs.bssid + " CRACKAVEL (M1+M2) — use hashcat -m 22000");
-                    if (st->complete())
+                    }
+                    if (st->complete()) {
+                        RGBLed::get().flashFound();
                         LOG.success("[HS-FULL] " + hs.bssid + " HANDSHAKE COMPLETO (M1-M4) — aircrack-ng pronto");
+                    }
                 }
                 LOG.success("[EAPOL M" + String(hs.type) + "] " + hs.bssid + " <-> " + hs.client);
             }

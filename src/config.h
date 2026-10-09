@@ -41,5 +41,26 @@
 #define SNIFFER_HOP_MS    200     // ms por canal no channel hopping
 #define FISHER_TIMEOUT_MS 30000   // timeout por alvo no PMKID Fisher
 
-// ── Pinos status LED ──────────────────────────────────────────────────────────
-#define LED_STATUS     2          // LED azul onboard
+// ── LED RGB onboard WS2812B ────────────────────────────────────────────────────
+// ESP32-S3-WROOM-1-N16R8 (placa com 2x USB-C): GPIO 38
+// ESP32-S3 DevKitC-1 padrão Espressif:          GPIO 48
+#ifdef ESP32_S3
+  #define RGB_LED_PIN    38       // WS2812B onboard — GPIO 38 (placa N16R8 2x USB-C)
+#else
+  #define RGB_LED_PIN    2        // fallback: LED simples em outros boards
+#endif
+#define RGB_LED_COUNT    1        // 1 LED RGB onboard
+#define RGB_BRIGHTNESS   80       // 0–255 (80 = bom para uso indoor sem ofuscar)
+
+// ── USB Radio — segundo rádio via porta USB OTG (conector USB-C esquerdo) ─────
+// Conecte um ESP32/ESP8266 com firmware AT ao conector USB OTG via cabo USB-C.
+// O adaptador aparece como porta serial (CDC ACM) e recebe comandos AT.
+// Habilite APENAS se tiver o módulo conectado; caso contrário deixe comentado.
+// Para ativar: descomente as 4 linhas abaixo e grave o firmware no módulo externo.
+// #define USB_RADIO_SERIAL  Serial1
+// #define USB_RADIO_BAUD    921600
+// #define USB_RADIO_TX      17    // GPIO17 (UART1 TX — livre no N16R8)
+// #define USB_RADIO_RX      18    // GPIO18 (UART1 RX — livre no N16R8)
+
+// ── Pinos status LED (fallback para ESP32 sem WS2812) ────────────────────────
+#define LED_STATUS     2          // LED azul onboard (ESP32 original)

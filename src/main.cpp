@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "utils/logger.h"
+#include "utils/rgb_led.h"
 #include "wifi/scanner.h"
 #include "wifi/deauth.h"
 #include "wifi/sniffer.h"
@@ -12,6 +13,7 @@
 #include "wifi/beacon_flood.h"
 #include "wifi/karma.h"
 #include "wifi/radio2.h"
+#include "wifi/usb_radio.h"
 #include "wifi/pmkid_fisher.h"
 #include "wifi/wps_scanner.h"
 #include "wifi/target_intel.h"
@@ -23,6 +25,20 @@
 #include "bluetooth/ble_spam.h"
 #include "web/server.h"
 
+// Determina o estado do LED RGB com base nos módulos ativos
+static RGBLed::State _ledState() {
+    if (EvilTwin::get().running)     return RGBLed::CLONE;
+    if (Deauther::get().running   ||
+        BeaconFlood::get().running ||
+        KarmaAttack::get().running ||
+        PMKIDFisher::get().running ||
+        BLESpam::get().running     ||
+        WifiteMode::get().running  ||
+        LEDAttack::get().running)  return RGBLed::ATTACK;
+    if (Sniffer::get().running)      return RGBLed::SCAN;
+    return RGBLed::IDLE;
+}
+
 void attackTask(void*) {
     for (;;) {
         Deauther::get().tick();
@@ -30,6 +46,7 @@ void attackTask(void*) {
         Sniffer::get().tick();
         EvilTwin::get().tick();
         Radio2::get().tick();
+        USBRadio::get().tick();
         PMKIDFisher::get().tick();
         HiddenScanner::get().tick();
         WifiteMode::get().tick();
@@ -48,11 +65,16 @@ void attackTask(void*) {
             }
             if (m1 > 0 && m2 > 0) {
                 Deauther::get().stop();
+                RGBLed::get().flashFound();
                 LOG.success("[AUTO] Handshake M1+M2 completo para " + apStr + " — deauth parado");
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(1));
+        // Atualiza estado do LED RGB
+        RGBLed::get().setState(_ledState());
+        RGBLed::get().tick();
+
+        vTaskDelay(pdMS_TO_TICKS(16));
     }
 }
 
@@ -63,9 +85,54 @@ void bleTask(void*) {
     }
 }
 
+// Botão BOOT (GPIO 0) — pausa/retoma ataques ativos com 1 clique
+// 2 cliques rápidos → scan rápido de redes
+static bool  _btnPause     = false;
+static int   _btnClicks    = 0;
+static unsigned long _btnLast = 0;
+
+static void IRAM_ATTR _bootIsr() {
+    unsigned long now = millis();
+    if (now - _btnLast > 50) { // debounce 50ms
+        _btnClicks++;
+        _btnLast = now;
+    }
+}
+
+static void _processBoot() {
+    if (_btnClicks == 0) return;
+    unsigned long now = millis();
+    if (now - _btnLast < 300) return; // espera fim de sequência de cliques
+
+    int clicks = _btnClicks;
+    _btnClicks = 0;
+
+    if (clicks == 1) {
+        _btnPause = !_btnPause;
+        if (_btnPause) {
+            Deauther::get().stop();
+            BeaconFlood::get().stop();
+            LOG.warn("[BTN] Ataques pausados (pressione novamente para retomar)");
+            RGBLed::get().flashError();
+        } else {
+            LOG.info("[BTN] Ataques retomados");
+        }
+    } else if (clicks == 2) {
+        LOG.info("[BTN] Scan rápido iniciado...");
+        WiFiScanner::get().scan();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     Serial.println("\n\n=== Ghost Predator Mobile v3.5 ===");
+
+    // LED RGB — pisca branco no boot
+    RGBLed::get().begin();
+
+    // Botão BOOT como controle de ataque
+    pinMode(0, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(0), _bootIsr, FALLING);
 
     pinMode(LED_STATUS, OUTPUT);
     digitalWrite(LED_STATUS, LOW);
@@ -99,6 +166,7 @@ void setup() {
     Deauther::get().fnResumeHop   = []()            { Sniffer::get().resumeHop(); };
 
     Radio2::get().begin();
+    USBRadio::get().begin();
     BLEScanner::get().begin();
     NimBLEDevice::init("GhostPredator");
 
@@ -114,22 +182,6 @@ void setup() {
 void loop() {
     esp_task_wdt_reset();
     WebServer::get().tick();
-
-    static unsigned long lastBlink = 0;
-    bool anyActive = Deauther::get().running    ||
-                     BeaconFlood::get().running  ||
-                     Sniffer::get().running      ||
-                     EvilTwin::get().running     ||
-                     KarmaAttack::get().running  ||
-                     PMKIDFisher::get().running  ||
-                     WifiteMode::get().running   ||
-                     BLESpam::get().running;
-
-    uint16_t interval = Sniffer::get().running ? 120 : 700;
-    if (millis() - lastBlink > interval) {
-        lastBlink = millis();
-        digitalWrite(LED_STATUS, anyActive ? !digitalRead(LED_STATUS) : HIGH);
-    }
-
+    _processBoot();
     delay(8);
 }

