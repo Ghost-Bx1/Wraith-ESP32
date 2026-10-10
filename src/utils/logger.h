@@ -16,12 +16,15 @@ class Logger {
 public:
     static Logger& get() { static Logger inst; return inst; }
 
+    LogLevel serialLevel = LOG_WARN; // apenas WARN/ERROR/SUCCESS/DATA no serial
+
     void log(LogLevel lvl, const String& msg) {
         LogEntry e{ millis(), lvl, msg };
         _buf.push_back(e);
         if (_buf.size() > MAX_LOG_LINES) _buf.erase(_buf.begin());
         for (auto& cb : _cbs) cb(e);
-        Serial.printf("[%lu] %s\n", e.ts, msg.c_str());
+        if (lvl >= serialLevel)
+            Serial.printf("[%lu] %s\n", e.ts, msg.c_str());
     }
 
     void info   (const String& m) { log(LOG_INFO,    m); }

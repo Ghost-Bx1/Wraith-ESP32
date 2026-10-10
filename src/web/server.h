@@ -368,7 +368,10 @@ private:
 
         // ── Evil Twin ─────────────────────────────────────────────────────────
         _postJson("/api/eviltwin/start", [](AsyncWebServerRequest* req, JsonDocument& doc) {
-            EvilTwin::get().start(doc["ssid"] | "FreeWiFi", doc["channel"] | 6);
+            String bssid = doc["bssid"] | "00:00:00:00:00:00";
+            uint8_t mac[6]; _parseMac(bssid.c_str(), mac);
+            EvilTwin::get().start(doc["ssid"] | "FreeWiFi", mac, doc["channel"] | 6,
+                                  doc["deauthLoop"] | true, doc["captureHS"] | true);
             req->send(200, "application/json", "{\"ok\":true}");
         });
         server.on("/api/eviltwin/stop", HTTP_POST, [](AsyncWebServerRequest* req) {

