@@ -57,12 +57,12 @@ O LED WS2812 no GPIO 48 indica o estado atual do sistema em tempo real:
 | Item | Valor |
 |------|-------|
 | **Rede WiFi** | GhostPredator |
-| **Senha WiFi** | predator |
+| **Senha WiFi** | predator123 |
 | **IP do painel** | http://192.168.4.1 |
 | **URL alternativa** | http://ghostpredator.local |
 | **Senha do painel** | predator |
 
-> Primeiro acesso: conecte ao WiFi "GhostPredator" com senha **predator**, depois abra http://192.168.4.1 no navegador.
+> Primeiro acesso: conecte ao WiFi "GhostPredator" com senha **predator123**, depois abra http://192.168.4.1 no navegador.
 
 ---
 
@@ -156,9 +156,10 @@ Conecte um adaptador WiFi RTL8188EU ou RTL8188CUS para ter um segundo radio inde
 11. [Auto-Attack / Wifite Mode](#11-auto-attack--wifite-mode)
 12. [Nuclear Auto-Attack](#12-nuclear-auto-attack)
 13. [Target Intel](#13-target-intel-fingerprinting-de-dispositivos)
-14. [LED Panel Attack](#14-led-panel-attack)
-15. [BLE Scanner e Spam](#15-ble-scanner-e-spam)
-16. [Fluxos de Ataque Completos](#16-fluxos-de-ataque-completos)
+14. [**Hidden SSID Scanner** *(NOVO)*](#14-hidden-ssid-scanner-revelador-de-redes-ocultas)
+15. [LED Panel Attack](#15-led-panel-attack)
+16. [BLE Scanner e Spam](#16-ble-scanner-e-spam)
+17. [Fluxos de Ataque Completos](#17-fluxos-de-ataque-completos)
 
 ---
 
@@ -481,13 +482,42 @@ O AP Clone vai muito alem do Evil Twin tradicional. Em vez de criar um AP pareci
    - Captura credenciais WiFi
 ```
 
+### Deteccao avancada no beacon capturado:
+
+O sniffer analisa cada IE do beacon para identificar com precisao as capacidades do AP:
+
+| IE | Tag | O que detecta |
+|----|-----|--------------|
+| RSN (WPA2/WPA3) | 48 | Cifra, AKM (PSK/SAE), PMF obrigatorio |
+| HT Capabilities | 45 | 802.11n (WiFi 4) |
+| VHT Capabilities | 191 | 802.11ac (WiFi 5) |
+| Vendor Specific | 221 | WPA (TKIP legado), OUI 00:50:F2 |
+| DS Parameter Set | 3 | Canal real (patchado no CSA) |
+
+**PMF (Protected Management Frames / 802.11w)**: detectado pelo bit 7 do RSN Capabilities byte. APs com PMF obrigatorio sao mais resistentes a deauth/disassoc — o AP Clone ainda funciona mas o deauth pode nao desconectar clientes PMF.
+
+**WPA3**: detectado pelo AKM SAE (00:0F:AC:08) no RSN IE. O clone replica o RSN IE exato, incluindo SAE, para enganar dispositivos WPA3.
+
+### CSA Injection — Migracao Forcada de Clientes:
+
+O CSA (Channel Switch Announcement) forca todos os clientes de um AP a migrarem para outro canal, sem precisar que eles se desconectem primeiro:
+
+```
+sendCSA(bssid_real, novo_canal, count=3)
+  → 5x Action frames Spectrum Management (categoria 0, acao 4)
+  → 5x Beacons com CSA IE incluido
+  → Clientes migram para o canal do nosso clone automaticamente
+```
+
+O CSA usa dois mecanismos em paralelo (Action frame + Beacon) para cobertura maxima — clientes que nao aceitam Action frames ainda obedecem ao Beacon.
+
 ### Novos modos do Deauth (v5):
 
 | Modo | Flag | O que faz |
 |------|------|-----------|
-| **CSA Attack** | `csaMode` | Channel Switch Announcement â€” move clientes para nosso canal |
-| **EAP Flood** | `eapFlood` | Manda EAP Identity Requests falsos â€” confunde autenticadores |
-| **TKIP MIC** | `tkipInjection` | Reporta falha MIC falsa â€” aciona blackout de 60s em WPA-TKIP |
+| **CSA Attack** | `csaMode` | Channel Switch Announcement — move clientes para nosso canal |
+| **EAP Flood** | `eapFlood` | Manda EAP Identity Requests falsos — confunde autenticadores |
+| **TKIP MIC** | `tkipInjection` | Reporta falha MIC falsa — aciona blackout de 60s em WPA-TKIP |
 
 ### Fingerprinting de dispositivos (novo no Sniffer):
 
@@ -595,10 +625,36 @@ Dispositivos WiFi com "Conexao automatica" ativada (que e o padrao em 100% dos s
 
 ### Modo MANA (Karma Avancado):
 
-- **Karma padrao**: so responde quando recebe um probe request
-- **MANA**: alem de responder, tambem emite beacons **ativos** com todos os SSIDs que ja coletou de probes anteriores
+- **Karma padrao**: responde apenas com o SSID especificamente pedido no probe request
+- **MANA**: responde a cada probe com ate 20 SSIDs conhecidos coletados anteriormente, maximizando associacoes
 
 O MANA e muito mais agressivo: mesmo dispositivos que nao estao enviando probes no momento podem ser capturados porque veem o beacon com o nome da rede que conhecem.
+
+> Implementacao de referencia: Dominic White & Ian de Villiers (SensePost, DEF CON 22, 2014).
+
+### Acumulacao de SSIDs Conhecidos:
+
+Todo SSID visto em qualquer probe request e adicionado a uma lista interna (ate 256 entradas, deduplicada). O MANA usa essa lista para responder. Isso significa que quanto mais tempo o Karma fica ativo, mais eficaz o MANA se torna.
+
+### Clone IEs — Respostas Indistinguiveis do AP Real:
+
+O Karma aproveita os beacons capturados pelo modulo APClone. Quando um dispositivo pede um SSID que ja foi escaneado e tem beacon armazenado, a Probe Response usa:
+
+- O **BSSID real** do AP (nao um BSSID sintetico)
+- O **beacon interval exato** do AP real
+- As **IEs exatas** (RSN, HT Capabilities, Vendor IEs) do beacon capturado
+- O **canal real** do AP
+
+Resultado: o dispositivo recebe uma Probe Response identica ao que o AP real enviaria — impossivel distinguir sem analisar o comportamento do handshake.
+
+### Blacklist — Nunca Responder a Redes Sensiveis:
+
+Configuravel em `config.h → KARMA_BLACKLIST`. O Karma nunca responde a SSIDs nessa lista, evitando responder a redes bancarias, corporativas criticas, etc. que possam levantar suspeitas.
+
+```cpp
+// config.h
+#define KARMA_BLACKLIST "BancoBradesco", "RedeHospitalar", "GovBR_Wifi"
+```
 
 ### Quem e vulneravel:
 
@@ -820,15 +876,39 @@ Automacao completa da auditoria WiFi. Inspirado no Wifite (ferramenta classica d
 â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
+### Logica adaptativa por RSSI:
+
+O WifiteMode ajusta tempos e tentativas baseado na forca do sinal de cada alvo:
+
+| Forca do sinal | PMKID timeout | Deauth timeout | Retentativas deauth |
+|---------------|--------------|----------------|---------------------|
+| Muito proximo (> -55 dBm) | 15s | 30s | 3x |
+| Proximo (-55 a -70 dBm) | 30s | 60s | 2x |
+| Longe (-70 a -85 dBm) | 45s | 80s | 1x |
+| Muito longe (< -85 dBm) | Pulado (skipWeak) | — | — |
+
+**Retry de Deauth com escalonamento de intensidade**: se a fase Deauth falha, ela retenta com intensidade crescente. Rodada 1: SOFT (64 pacotes/burst). Rodada 2: HARD (512 pacotes/burst).
+
+### Ordenacao de alvos:
+
+Os alvos sao ordenados automaticamente para maximizar taxa de sucesso:
+1. **WPS PIN vulneravel** — prioridade maxima (flag manual disponivel no painel)
+2. **RSSI mais forte** — alvos proximos primeiro (maior chance de captura)
+3. Somente redes WPA2+ (WEP e Open sao ignorados)
+
+### Deteccao de WPS Pixie Dust:
+
+Durante o scan WPS, o WifiteMode identifica APs potencialmente vulneraveis ao ataque Pixie Dust (geracao fraca de E-S1/E-S2 nonces por certas implementacoes Broadcom/Ralink). Esses APs sao marcados como `pixieDust: true` no status JSON para ataque manual.
+
 ### Configuracoes:
 
 | Parametro | Padrao | O que faz |
 |-----------|--------|-----------|
-| `minRssi` | -75 dBm | Ignora redes com sinal mais fraco que esse valor (evita perder tempo em redes distantes) |
-| `pmkidTimeout` | 30s | Tempo maximo na fase PMKID |
-| `deauthTimeout` | 60s | Tempo maximo aguardando handshake |
+| `minRssi` | -70 dBm | Ignora redes com sinal mais fraco que esse valor |
+| `pmkidTimeout` | 30s | Tempo maximo na fase PMKID (adaptativo por RSSI) |
+| `deauthTimeout` | 60s | Tempo maximo aguardando handshake (adaptativo) |
 | `eviltwinTimeout` | 120s | Tempo maximo no Evil Twin por rede |
-| `skipNoClients` | false | Pula fase Deauth se nao detectar clientes (economiza tempo) |
+| `skipWeak` | true | Pula APs com RSSI < -85 dBm automaticamente |
 
 ### Tabela de progresso no painel:
 
@@ -907,19 +987,84 @@ GET  /api/nuclear/status
 
 ### O que e?
 
-Coleta informacoes detalhadas sobre dispositivos especificos conectados a uma rede. Funciona em modo monitor capturando trafego nao criptografado.
+Motor de reconhecimento passivo que captura trafego 802.11 em modo promiscuo e extrai dados de todos os dispositivos ao redor — sem injecao de frames, sem fazer nada ativo. Coleta: fabricante pelo MAC (OUI lookup), tipo de dispositivo via fingerprint de probe requests, consultas DNS em texto claro, e credenciais HTTP enviadas em formularios sem HTTPS.
+
+### Capacidades em detalhe:
+
+#### OUI Lookup — Fabricante pelo MAC
+
+Identifica o fabricante de qualquer dispositivo pelos primeiros 3 octetos do MAC address. Base de dados embutida cobre os fabricantes mais comuns:
+
+| OUI | Fabricante | Tipo provavel |
+|-----|-----------|---------------|
+| 28:CF:E9, AC:BC:32, 38:F9:D3... | Apple | iPhone, iPad, MacBook |
+| 68:09:27, E4:92:FB, A0:82:1F... | Samsung | Android Galaxy |
+| 90:61:AE, 08:21:EF, 78:11:DC... | Xiaomi | Android Redmi/POCO |
+| F4:42:8F, 48:D6:D5... | Google | Pixel, ChromeOS |
+| 14:2D:27, C4:E9:84... | TP-Link | Roteador/AP |
+| 60:45:CB, 00:1E:8C... | Intelbras | Roteador BR |
+
+MACs localmente administrados (bit U/L = 1, primeiro octeto impar) indicam randomizacao de MAC — o dispositivo esta escondendo sua identidade real.
+
+#### Device Fingerprint — Tipo de Dispositivo
+
+Combina OUI com SSIDs encontrados nos probe requests para identificar o tipo do dispositivo sem nenhuma interacao:
+
+- Fabricante Apple → "iOS/macOS — Apple"
+- Fabricante Samsung → "Android — Samsung"
+- SSID pedido contem "iPhone" → "iOS — iPhone"
+- SSID pedido contem "Galaxy" → "Android — Samsung"
+- Fabricante TP-Link/Intelbras/Asus → "Router/AP — [marca]"
+
+#### Captura DNS Passiva
+
+Parseia pacotes data 802.11 em busca de consultas DNS (UDP porta 53). Como DNS nao tem criptografia (sem DoH/DoT), cada dominio consultado e capturado e associado ao MAC do cliente. Limite de 200 consultas, deduplicadas por par (dominio + MAC cliente).
+
+#### Captura de Credenciais HTTP
+
+Monitora trafego TCP nas portas 80, 8080 e 8888. Quando detecta um POST HTTP com body contendo palavras-chave (`pass`, `pwd`, `senha`, `login`, `user`), salva o MAC, host, path e body (primeiros 256 bytes).
+
+> Apenas sites sem HTTPS sao vulneraveis. HTTPS (porta 443) e criptografado e nao capturavel passivamente.
 
 ### O que captura:
 
 | Dado | Como captura | O que revela |
 |------|-------------|-------------|
-| **Consultas DNS** | Pacotes UDP porta 53 (sem criptografia) | Quais sites o dispositivo visita |
-| **User-Agent HTTP** | Headers de requisicoes HTTP | Sistema operacional, navegador, versao |
-| **Credenciais HTTP** | POST de formularios em sites sem HTTPS | Logins e senhas (sites sem HTTPS) |
-| **Fingerprint de SO** | Analise de padroes de trafego 802.11 | Windows / Android / iOS / macOS |
-| **Horarios de atividade** | Timestamps dos pacotes | Padroes de uso do dispositivo |
+| **Fabricante** | OUI dos 3 primeiros octetos do MAC | Marca do dispositivo (Apple, Samsung, Xiaomi...) |
+| **Tipo de dispositivo** | OUI + SSIDs nos probe requests | iPhone, Android, Roteador, Windows |
+| **Consultas DNS** | Pacotes UDP porta 53 em claro | Quais apps/sites o dispositivo usa |
+| **Credenciais HTTP** | POST sem HTTPS | Login e senha em sites HTTP |
+| **MAC aleatorio** | Bit U/L do primeiro octeto | Dispositivo usa randomizacao de privacidade |
+| **Probe requests** | Management frames tipo 0x04 | Redes que o dispositivo ja conheceu |
 
 ### API:
+
+```json
+POST /api/intel/start   -> inicia captura promiscua
+
+POST /api/intel/stop    -> para captura
+
+GET  /api/intel/data
+{
+  "devices": [
+    {
+      "mac": "A4:C3:F0:...",
+      "manufacturer": "Apple",
+      "deviceType": "iOS/macOS - Apple",
+      "rssi": -62,
+      "probedSSIDs": ["MinhaRede", "Trabalho"]
+    }
+  ],
+  "dns": [
+    { "clientMac": "A4:C3:F0:...", "domain": "api.whatsapp.com" }
+  ],
+  "httpCreds": [
+    { "host": "portal.exemplo.com", "path": "/login", "body": "user=joao&pass=1234" }
+  ]
+}
+```
+
+### API (legado):
 
 ```json
 POST /api/intel/start
@@ -939,7 +1084,78 @@ GET  /api/intel/data
 
 ---
 
-## 14. LED Panel Attack
+## 14. Hidden SSID Scanner (Revelador de Redes Ocultas)
+
+### O que e?
+
+Redes WiFi podem ser configuradas como "ocultas" — o AP nao transmite o SSID nos beacons periodicos, entao a rede nao aparece na lista de WiFi normal. O Hidden SSID Scanner usa duas tecnicas para forcas o AP a revelar o SSID escondido.
+
+### Por que funciona?
+
+O protocolo 802.11 exige que um AP responda a uma Probe Request direcionada com o SSID real, mesmo que o AP esteja em modo oculto. O scanner explora isso de duas formas:
+
+1. **Probe Request direcionada (unicast)**: Envia probe com SSID vazio diretamente para o BSSID do AP oculto. O AP e obrigado a responder com o SSID real na Probe Response.
+2. **Probe Request com wordlist (broadcast + unicast)**: Envia probes com SSIDs da wordlist. Se o AP reconhece o SSID pedido como sendo o seu, ele confirma com Probe Response contendo o SSID.
+
+### Mecanismo interno:
+
+```
+1. loadFromScan()   — usa WiFi.scanNetworks(includeHidden=true) para listar BSSIDs com SSID vazio
+2. tick()           — para cada AP oculto:
+     a. Probe unicast com SSID vazio         → AP responde com SSID real
+     b. 2x Probe unicast com SSID da wordlist → confirma se acertar
+     c. Probe broadcast em canal atual        → cobertura ampla
+3. _rxCb()          — captura Probe Responses (subtype 5) e extrai SSID do IE 0x00
+4. Resultado: lista "revealed" com SSIDs descobertos
+```
+
+### Cadencia de varredura:
+
+- ~11 probes por segundo por canal
+- Hop completo nos canais 1 a 13 a cada tick
+- 3 probes por alvo por tick: vazio + 2 da wordlist
+- Wordlist de 80 SSIDs: nomes genericos + provedores BR (CLARO, VIVO, TIM, OI) + fabricantes + dispositivos moveis
+
+### Wordlist integrada (exemplos):
+
+```
+Genericos:    home, wifi, router, network, default, hidden, secure, office
+Provedores:   NET, CLARO, VIVO, TIM, OI, minhacasa, meu_wifi, wifi_casa
+Fabricantes:  NETGEAR, TP-LINK, ASUS, Xiaomi, Huawei, Intelbras, D-Link
+Moveis:       AndroidAP, iPhone, Redmi, Galaxy, OnePlus, Pixel
+Comercial:    hotel_wifi, lobby, conference, staff, pos, caixa, pdv
+```
+
+### Limitacoes:
+
+- Nao funciona em APs com PMF obrigatorio que ignoram probes de clientes nao autenticados
+- SSIDs muito incomuns (nao na wordlist) so sao revelados pela probe vazia — que funciona em ~90% dos APs
+- Requer que o AP esteja no mesmo alcance de RF
+
+### API:
+
+```json
+POST /api/hidden/scan   -> inicia o scanner
+
+POST /api/hidden/stop   -> para o scanner
+
+GET  /api/hidden/status
+{
+  "running": true,
+  "targets": [
+    { "bssid": "AA:BB:CC:DD:EE:FF", "channel": 6, "ssid": "" }
+  ],
+  "revealed": ["MinhaRedeOculta", "RedeSecreta"]
+}
+```
+
+### Combinacao recomendada:
+
+Use antes do Karma Attack: se um AP oculto tem clientes, esses clientes enviarao probes com o SSID real. O Hidden Scanner revela o SSID e entao o Karma pode responder a esses probes.
+
+---
+
+## 15. LED Panel Attack
 
 ### O que e?
 
@@ -979,7 +1195,7 @@ POST /api/led/attack
 
 ---
 
-## 15. BLE Scanner e Spam
+## 16. BLE Scanner e Spam
 
 ### BLE Scanner
 
@@ -1036,7 +1252,7 @@ GET  /api/bt/devices
 
 ---
 
-## 16. Fluxos de Ataque Completos
+## 17. Fluxos de Ataque Completos
 
 Exemplos de cenarios completos de auditoria do inicio ao fim.
 
@@ -1167,7 +1383,7 @@ Passo 3 - Coletar credenciais
 
 2. Conecte ao WiFi
    Rede:  GhostPredator
-   Senha: predator
+   Senha: predator123
 
 3. Acesse o painel
    → http://192.168.4.1
@@ -1185,20 +1401,6 @@ Passo 3 - Coletar credenciais
 
 DICA: Use o botao BOOT para pausar todos os ataques rapidamente.
 ```
-
----
-
-## Resolucao de Problemas
-
-| Problema | Causa provavel | Solucao |
-|----------|---------------|---------|
-| Rede GhostPredator nao aparece | Dispositivo nao inicializou | Aguarde 5s e atualize a lista de WiFi |
-| "Nao foi possivel conectar" | Senha errada salva no Windows | Clique direito → Esquecer → Reconectar com "predator" |
-| Painel nao carrega | IP errado | Use http://192.168.4.1 (nao HTTPS) |
-| LED sempre verde | GPIO do LED incorreto | Altere RGB_LED_PIN para 38 em config.h e regrave |
-| LED nao acende | GPIO do LED incorreto | Altere RGB_LED_PIN para 48 em config.h e regrave |
-| Adaptador USB nao reconhecido | Chip nao compativel (AR9271) | Use adaptador RTL8188EU/CUS (TL-WN722N v1) |
-| Crash loop na inicializacao | Brownout por fonte fraca | Use fonte USB com minimo 500mA; o brownout detector esta desabilitado por firmware |
 
 ---
 
@@ -1229,15 +1431,37 @@ O ESP32-S3 expoe um console serial nativo via USB CDC (sem CH343). Permite log e
 
 ### Capturas Persistentes (#44)
 
-Handshakes, PMKIDs e credenciais sao salvos no filesystem LittleFS e sobrevivem ao reboot.
+Handshakes, PMKIDs e credenciais sao salvos no filesystem LittleFS e sobrevivem ao reboot e desligamento. A estrutura de arquivos no ESP32:
+
+```
+/captures/
+  hs_AA-BB-CC-DD-EE-FF.hc22000    <- handshake WPA2 (por BSSID)
+  pmkid_AA-BB-CC-DD-EE-FF.hc22000 <- PMKID capturado
+  creds.json                        <- credenciais Evil Twin
+  log.jsonl                         <- log de eventos (JSONL)
+```
+
+**Formato hc22000** — padrao hashcat para WPA2/PMKID:
+
+```
+WPA*02*<MIC 16B hex>*<BSSID flat>*<ClientMAC flat>*<SSID hex>*<ANonce>*<SNonce>*<EAPOL data>
+```
+
+Exemplo de uso imediato apos exportar:
+
+```bash
+hashcat -m 22000 hs_AABBCCDDEE.hc22000 rockyou.txt
+hashcat -m 22000 hs_AABBCCDDEE.hc22000 rockyou.txt -r best64.rule
+hashcat -m 22000 hs_AABBCCDDEE.hc22000 -a 3 ?d?d?d?d?d?d?d?d  # brute 8 digitos
+```
 
 | API | Descricao |
 |-----|-----------|
 | `/api/captures/list` | Lista arquivos de captura no filesystem |
-| `/api/captures/download?file=hs_BSSID.hc22000` | Baixa captura diretamente |
+| `/api/captures/download?file=hs_BSSID.hc22000` | Baixa captura diretamente no browser |
 | `/api/captures/wipe` | Apaga todas as capturas (auto-destruct manual) |
 
-Formato dos arquivos: **hc22000** (compativel com `hashcat -m 22000 arquivo.hc22000 wordlist.txt`)
+**Handshake crackable vs completo**: o sniffer aceita handshake parcial `M1+M2` ou `M2+M3` — suficiente para hashcat `-m 22000`. Nao e necessario capturar os 4 pacotes do 4-way handshake.
 
 ### Mapa de Canais (#42)
 
@@ -1452,7 +1676,7 @@ hashcat -m 22000 hs_MinhaRede.hc22000 rockyou.txt
 | Problema | Causa provavel | Solucao |
 |----------|---------------|---------|
 | Rede GhostPredator nao aparece | Dispositivo nao inicializou | Aguarde 5s e atualize a lista de WiFi |
-| "Nao foi possivel conectar" | Senha errada salva no Windows | Clique direito → Esquecer → Reconectar com "predator" |
+| "Nao foi possivel conectar" | Senha errada salva no Windows | Clique direito → Esquecer → Reconectar com "predator123" |
 | Painel nao carrega | IP errado | Use http://192.168.4.1 (nao HTTPS) |
 | LED sempre verde | GPIO do LED incorreto | Altere RGB_LED_PIN para 38 em config.h e regrave |
 | LED nao acende | GPIO do LED incorreto | Altere RGB_LED_PIN para 48 em config.h e regrave |
@@ -1463,4 +1687,4 @@ hashcat -m 22000 hs_MinhaRede.hc22000 rockyou.txt
 
 ---
 
-*Ghost Predator Mobile v4.1 - Para uso educacional e testes autorizados apenas.*
+*Ghost Predator Mobile v5.0 - Para uso educacional e testes autorizados apenas.*
