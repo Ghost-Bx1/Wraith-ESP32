@@ -1,5 +1,5 @@
-#!/bin/bash
-# Ghost Predator Mobile — Instalador Inteligente (Linux / macOS)
+﻿#!/bin/bash
+# Wraith — Instalador Inteligente (Linux / macOS)
 
 set -e
 
@@ -117,8 +117,8 @@ echo ""
 echo -e "${GRN}  ╔══════════════════════════════════════════╗${NC}"
 echo -e "${GRN}  ║       INSTALACAO CONCLUIDA!              ║${NC}"
 echo -e "${GRN}  ╠══════════════════════════════════════════╣${NC}"
-echo -e "${WHT}  ║  WiFi  :  GhostPredator / predator123   ║${NC}"
-echo -e "${WHT}  ║  URL   :  http://ghostpredator.local     ║${NC}"
+echo -e "${WHT}  ║  WiFi  :  Wraith / predator123   ║${NC}"
+echo -e "${WHT}  ║  URL   :  http://wraith.local     ║${NC}"
 echo -e "${WHT}  ║  IP    :  http://192.168.4.1             ║${NC}"
 echo -e "${WHT}  ║  Senha :  predator                       ║${NC}"
 echo -e "${GRN}  ╚══════════════════════════════════════════╝${NC}"

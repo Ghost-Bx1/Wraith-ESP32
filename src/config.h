@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 // ── AP de gerência (painel web) ───────────────────────────────────────────────
-#define AP_SSID        "GhostPredator"
+#define AP_SSID        "Wraith"
 #define AP_PASS        "predator"
 #define AP_CHANNEL     1
 #define AP_IP          "192.168.4.1"
-#define MDNS_HOST      "ghostpredator"  // acessível em http://ghostpredator.local
+#define MDNS_HOST      "wraith"  // acessivel em http://wraith.local
 #define WEB_USER       "admin"
 #define WEB_PASS       "predator"       // senha do painel web
 

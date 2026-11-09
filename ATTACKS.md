@@ -1,4 +1,4 @@
-﻿# Ghost Predator - Guia Completo de Ataques
+﻿# Wraith - Guia Completo de Ataques
 
 > **AVISO LEGAL**: Use exclusivamente em redes e dispositivos que voce possui ou tem autorizacao explicita e documentada para testar. Uso nao autorizado e crime (Lei 12.737/2012 no Brasil). Os autores nao se responsabilizam por uso indevido.
 
@@ -21,7 +21,7 @@
 
 ### Componentes Onboard Utilizados
 
-| Componente | GPIO | Funcao no Ghost Predator |
+| Componente | GPIO | Funcao no Wraith |
 |-----------|------|--------------------------|
 | **WS2812 RGB LED** | GPIO 48 (tente 38 se nao acender) | Indicador visual de estado do sistema |
 | **Botao BOOT** | GPIO 0 | Pausar/retomar ataques; 2x cliques = scan rapido |
@@ -56,13 +56,13 @@ O LED WS2812 no GPIO 48 indica o estado atual do sistema em tempo real:
 
 | Item | Valor |
 |------|-------|
-| **Rede WiFi** | GhostPredator |
+| **Rede WiFi** | Wraith |
 | **Senha WiFi** | predator123 |
 | **IP do painel** | http://192.168.4.1 |
-| **URL alternativa** | http://ghostpredator.local |
+| **URL alternativa** | http://wraith.local |
 | **Senha do painel** | predator |
 
-> Primeiro acesso: conecte ao WiFi "GhostPredator" com senha **predator123**, depois abra http://192.168.4.1 no navegador.
+> Primeiro acesso: conecte ao WiFi "Wraith" com senha **predator123**, depois abra http://192.168.4.1 no navegador.
 
 ---
 
@@ -284,7 +284,7 @@ O protocolo WiFi (IEEE 802.11) foi criado nos anos 90 sem autenticacao nos pacot
 ### Como funciona na pratica:
 
 ```
-1. O Ghost Predator monitora o canal do AP-alvo
+1. O Wraith monitora o canal do AP-alvo
 2. Voce seleciona o AP e o cliente (ou broadcast para todos)
 3. O ESP32 fabrica pacotes de deautenticacao:
    - Remetente falsificado: MAC do roteador
@@ -320,7 +320,7 @@ O protocolo WiFi (IEEE 802.11) foi criado nos anos 90 sem autenticacao nos pacot
 
 **PMF (Protected Management Frames, 802.11w)** e uma protecao que assina criptograficamente os pacotes de gerenciamento. Roteadores modernos com PMF obrigatorio sao imunes a deauth simples.
 
-O Ghost Predator tenta bypassar com **SA Query Flood**: envia tantas requisicoes de consulta de seguranca que alguns firmwares ficam sobrecarregados e nao verificam a protecao em todos os pacotes.
+O Wraith tenta bypassar com **SA Query Flood**: envia tantas requisicoes de consulta de seguranca que alguns firmwares ficam sobrecarregados e nao verificam a protecao em todos os pacotes.
 
 ### API:
 
@@ -360,13 +360,13 @@ GET  /api/deauth/status
 
 ### O que e?
 
-Cria uma copia identica de uma rede WiFi real (mesmo nome, mesma aparencia) mas sem senha e controlada pelo Ghost Predator. Quem se conectar ve uma pagina falsa pedindo a senha do WiFi.
+Cria uma copia identica de uma rede WiFi real (mesmo nome, mesma aparencia) mas sem senha e controlada pelo Wraith. Quem se conectar ve uma pagina falsa pedindo a senha do WiFi.
 
 > **Analogia**: Como clonar uma agencia bancaria do lado da original, fechar a original temporariamente e quando os clientes entrarem na falsa, pedir para "confirmar a senha para acessar a conta".
 
 ### Por que as pessoas se conectam?
 
-1. O Ghost Predator usa Deauth para derrubar o sinal da rede real
+1. O Wraith usa Deauth para derrubar o sinal da rede real
 2. O AP falso emite com sinal forte (esta perto)
 3. O dispositivo ve o mesmo nome de rede disponivel e conecta automaticamente
 4. Como e uma rede "aberta" (sem senha), a maioria dos dispositivos conecta sem perguntar
@@ -379,18 +379,18 @@ Cria uma copia identica de uma rede WiFi real (mesmo nome, mesma aparencia) mas 
 â•‘  Scanner identifica: SSID, BSSID, canal, clientes        â•‘
 â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
 â•‘  ETAPA 2 - DEAUTH (derruba a rede real)                  â•‘
-â•‘  Ghost Predator â†’ [pacotes deauth] â†’ Clientes            â•‘
+â•‘  Wraith â†’ [pacotes deauth] â†’ Clientes            â•‘
 â•‘  Resultado: todos os dispositivos sao desconectados      â•‘
 â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
 â•‘  ETAPA 3 - CLONE AP (cria a rede falsa)                  â•‘
-â•‘  Ghost Predator emite beacons com o mesmo SSID           â•‘
+â•‘  Wraith emite beacons com o mesmo SSID           â•‘
 â•‘  sem senha, sinal forte                                  â•‘
 â•‘  Resultado: dispositivos veem a "mesma" rede             â•‘
 â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
 â•‘  ETAPA 4 - CONEXAO DO ALVO                               â•‘
 â•‘  Dispositivo conecta automaticamente ao AP falso         â•‘
-â•‘  Recebe IP do DHCP do Ghost Predator                     â•‘
-â•‘  DNS do dispositivo aponta para o Ghost Predator         â•‘
+â•‘  Recebe IP do DHCP do Wraith                     â•‘
+â•‘  DNS do dispositivo aponta para o Wraith         â•‘
 â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
 â•‘  ETAPA 5 - CAPTIVE PORTAL (pagina falsa)                 â•‘
 â•‘  Qualquer site HTTP â†’ redirecionado para portal falso    â•‘
@@ -401,7 +401,7 @@ Cria uma copia identica de uma rede WiFi real (mesmo nome, mesma aparencia) mas 
 
 ### Por que o redirecionamento funciona:
 
-- **DNS falso**: o Ghost Predator responde QUALQUER consulta DNS com seu proprio IP (192.168.4.1). Quando o dispositivo pergunta "qual o IP do google.com?", ele responde "192.168.4.1"
+- **DNS falso**: o Wraith responde QUALQUER consulta DNS com seu proprio IP (192.168.4.1). Quando o dispositivo pergunta "qual o IP do google.com?", ele responde "192.168.4.1"
 - **DHCP**: distribui o proprio IP como gateway e servidor DNS para todos os clientes
 - **HTTP**: todo acesso HTTP e interceptado e redirecionado para o portal
 - **HTTPS**: nao pode ser redirecionado (o navegador bloqueia sem certificado valido). Porem o portal captive em si usa HTTP e funciona na maioria dos dispositivos
@@ -548,7 +548,7 @@ Cria centenas ou milhares de redes WiFi falsas ao mesmo tempo, enchendo a lista 
 
 ### Como funciona:
 
-Toda rede WiFi anuncia sua presenca continuamente enviando pacotes chamados **beacons** a cada 100ms - e como um outdoor que pisca dizendo "estou aqui, me chamo X". O Ghost Predator injeta beacons fabricados com SSIDs da sua lista em alta velocidade, sem precisar de roteador real.
+Toda rede WiFi anuncia sua presenca continuamente enviando pacotes chamados **beacons** a cada 100ms - e como um outdoor que pisca dizendo "estou aqui, me chamo X". O Wraith injeta beacons fabricados com SSIDs da sua lista em alta velocidade, sem precisar de roteador real.
 
 > **Analogia**: Como espalhar centenas de placas de "Loja Aberta" falsas em uma rua - as lojas nao existem, mas as placas confundem quem esta procurando.
 
@@ -562,7 +562,7 @@ Toda rede WiFi anuncia sua presenca continuamente enviando pacotes chamados **be
 
 ### Por que cada SSID tem MAC diferente?
 
-O Ghost Predator usa o algoritmo FNV-1a para gerar um MAC unico e deterministico para cada SSID. Isso faz cada rede falsa parecer vir de um roteador diferente, tornando o flood muito mais convincente e dificil de filtrar automaticamente.
+O Wraith usa o algoritmo FNV-1a para gerar um MAC unico e deterministico para cada SSID. Isso faz cada rede falsa parecer vir de um roteador diferente, tornando o flood muito mais convincente e dificil de filtrar automaticamente.
 
 ### Usos praticos:
 
@@ -594,7 +594,7 @@ GET  /api/beacon/status
 
 ### O que e?
 
-Explora o comportamento automatico dos dispositivos de procurar redes conhecidas. Quando um celular pergunta no ar "MinhaRedeEmpresa esta aqui?", o Ghost Predator responde "Sim, sou eu!" - mesmo nao sendo.
+Explora o comportamento automatico dos dispositivos de procurar redes conhecidas. Quando um celular pergunta no ar "MinhaRedeEmpresa esta aqui?", o Wraith responde "Sim, sou eu!" - mesmo nao sendo.
 
 ### Por que funciona?
 
@@ -611,14 +611,14 @@ Dispositivos WiFi com "Conexao automatica" ativada (que e o padrao em 100% dos s
    â†’ "AeroportoFree, voce esta ai?"
    (isso acontece em segundo plano, sem voce saber)
 
-2. O Ghost Predator ouve em modo monitor e captura esses probes
+2. O Wraith ouve em modo monitor e captura esses probes
 
 3. Para cada probe, responde imediatamente:
    â†’ "Sim! Sou a MinhaRedeEmpresa. Conecte-se!" (com o mesmo SSID pedido)
 
 4. O celular acredita e inicia conexao automatica (sem voce fazer nada)
 
-5. O celular esta conectado ao Ghost Predator
+5. O celular esta conectado ao Wraith
    â†’ Trafego HTTP pode ser capturado
    â†’ Portal captive pode ser exibido para coletar senha
 ```
@@ -705,10 +705,10 @@ Quando um celular e deautenticado, ele envia probe requests perguntando pela red
 
 ```
 Celular â†’ "MinhaRede, voce esta ai?"
-Ghost Predator â†’ "Sim! [SSID: MinhaRede | MAC: AA:BB:CC:DD:EE:01]" (MAC errado)
+Wraith â†’ "Sim! [SSID: MinhaRede | MAC: AA:BB:CC:DD:EE:01]" (MAC errado)
 Celular â†’ tenta conectar com MAC AA:BB:CC:DD:EE:01 â†’ falha
 Celular â†’ "MinhaRede, voce esta ai?"  (tenta de novo)
-Ghost Predator â†’ "Sim! [SSID: MinhaRede | MAC: AA:BB:CC:DD:EE:02]" (outro MAC errado)
+Wraith â†’ "Sim! [SSID: MinhaRede | MAC: AA:BB:CC:DD:EE:02]" (outro MAC errado)
 ... loop infinito ...
 ```
 
@@ -753,10 +753,10 @@ Captura o PMKID de um AP sem precisar que nenhum cliente esteja conectado. O PMK
 ### Como funciona:
 
 ```
-Ghost Predator â†’ [Authentication Request] â†’ AP
-AP             â†’ [Authentication Response] â†’ Ghost Predator
-Ghost Predator â†’ [Association Request] â†’ AP
-AP             â†’ [Association Response + RSNIE contendo PMKID] â†’ Ghost Predator
+Wraith â†’ [Authentication Request] â†’ AP
+AP             â†’ [Authentication Response] â†’ Wraith
+Wraith â†’ [Association Request] â†’ AP
+AP             â†’ [Association Response + RSNIE contendo PMKID] â†’ Wraith
                                           â†‘ PMKID extraido aqui!
 ```
 
@@ -850,7 +850,7 @@ GET  /api/wps/results   â†’ lista APs vulneraveis detectados
 
 ### O que e?
 
-Automacao completa da auditoria WiFi. Inspirado no Wifite (ferramenta classica do Linux), o Ghost Predator pega todas as redes do scan e tenta capturar a senha de cada uma automaticamente usando tres tecnicas em sequencia.
+Automacao completa da auditoria WiFi. Inspirado no Wifite (ferramenta classica do Linux), o Wraith pega todas as redes do scan e tenta capturar a senha de cada uma automaticamente usando tres tecnicas em sequencia.
 
 ### Fluxo automatico para cada rede:
 
@@ -1382,7 +1382,7 @@ Passo 3 - Coletar credenciais
    → LED azul pulsando = sistema pronto
 
 2. Conecte ao WiFi
-   Rede:  GhostPredator
+   Rede:  Wraith
    Senha: predator123
 
 3. Acesse o painel
@@ -1412,7 +1412,7 @@ O ESP32-S3 expoe um console serial nativo via USB CDC (sem CH343). Permite log e
 1. Conecte o USB-C esquerdo (OTG) ao PC
 2. Uma nova porta COM aparece no Gerenciador de Dispositivos
 3. Abra com qualquer monitor serial a 115200 baud
-4. Todos os logs do Ghost Predator aparecem em tempo real
+4. Todos os logs do Wraith aparecem em tempo real
 
 > Se precisar usar a porta OTG para um adaptador RTL8188 ao mesmo tempo, use o conector USB-C direito (CH343P) para o console. As duas portas funcionam independentemente.
 
@@ -1675,7 +1675,7 @@ hashcat -m 22000 hs_MinhaRede.hc22000 rockyou.txt
 
 | Problema | Causa provavel | Solucao |
 |----------|---------------|---------|
-| Rede GhostPredator nao aparece | Dispositivo nao inicializou | Aguarde 5s e atualize a lista de WiFi |
+| Rede Wraith nao aparece | Dispositivo nao inicializou | Aguarde 5s e atualize a lista de WiFi |
 | "Nao foi possivel conectar" | Senha errada salva no Windows | Clique direito → Esquecer → Reconectar com "predator123" |
 | Painel nao carrega | IP errado | Use http://192.168.4.1 (nao HTTPS) |
 | LED sempre verde | GPIO do LED incorreto | Altere RGB_LED_PIN para 38 em config.h e regrave |
@@ -1687,5 +1687,5 @@ hashcat -m 22000 hs_MinhaRede.hc22000 rockyou.txt
 
 ---
 
-*Ghost Predator Mobile v5.0 - Para uso educacional e testes autorizados apenas.*
+*Wraith v5.0 - Para uso educacional e testes autorizados apenas.*
 

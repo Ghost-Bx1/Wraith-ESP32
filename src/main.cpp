@@ -1,4 +1,4 @@
-#include <Arduino.h>
+﻿#include <Arduino.h>
 #include <LittleFS.h>
 #include <ESPmDNS.h>
 #include <esp_task_wdt.h>
@@ -155,7 +155,7 @@ void setup() {
     while (!Serial && millis() - _usbWait < 2000) delay(10);
     USB.begin();
 #endif
-    Serial.println("\n\n=== Ghost Predator Mobile v4.0 ===");
+    Serial.println("\n\n=== Wraith v4.0 ===");
 
     // LED RGB — pisca branco no boot
     RGBLed::get().begin();
@@ -179,7 +179,7 @@ void setup() {
     // Web server + AP WiFi
     WebServer::get().begin();
 
-    // mDNS → http://ghostpredator.local
+    // mDNS -> http://wraith.local
     if (MDNS.begin(MDNS_HOST)) {
         MDNS.addService("http", "tcp", 80);
         LOG.success("mDNS: http://" MDNS_HOST ".local");
@@ -218,14 +218,14 @@ void setup() {
     };
 #endif
     BLEScanner::get().begin();
-    NimBLEDevice::init("GhostPredator");
+    NimBLEDevice::init("Wraith");
 
     // FreeRTOS tasks
     xTaskCreatePinnedToCore(attackTask, "attacks", 16384, nullptr, 1, nullptr, 0);
     xTaskCreatePinnedToCore(bleTask,    "ble_spam", 4096, nullptr, 1, nullptr, 1);
 
     digitalWrite(LED_STATUS, HIGH);
-    LOG.success("Ghost Predator Mobile v4.0 | AP: " AP_SSID " | http://" MDNS_HOST ".local");
+    LOG.success("Wraith v4.0 | AP: " AP_SSID " | http://" MDNS_HOST ".local");
     LOG.info("Heap: " + String(ESP.getFreeHeap() / 1024) + " KB livre");
 }
 

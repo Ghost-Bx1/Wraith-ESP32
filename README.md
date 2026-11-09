@@ -1,4 +1,4 @@
-# Ghost Predator Mobile - ESP32
+﻿# Wraith - ESP32
 
 > Portable WiFi and Bluetooth security assessment platform running directly on ESP32 with a web SPA interface accessible from any phone or laptop. No extra software, no special OS - just flash and use.
 
@@ -24,7 +24,7 @@
 
 ## Table of Contents
 
-1. [What is Ghost Predator Mobile](#what-is-ghost-predator-mobile)
+1. [What is Wraith](#what-is-ghost-predator-mobile)
 2. [How it Works](#how-it-works)
 3. [Supported Hardware](#supported-hardware)
 4. [Installation](#installation)
@@ -40,9 +40,9 @@
 
 ---
 
-## What is Ghost Predator Mobile
+## What is Wraith
 
-Ghost Predator Mobile turns an ESP32 microcontroller into a full wireless security audit tool. The device operates as an **autonomous Access Point**: on boot it creates its own WiFi network (`GhostPredator`) and hosts a complete web application accessible at `192.168.4.1`.
+Wraith turns an ESP32 microcontroller into a full wireless security audit tool. The device operates as an **autonomous Access Point**: on boot it creates its own WiFi network (`Wraith`) and hosts a complete web application accessible at `192.168.4.1`.
 
 ### Why ESP32?
 
@@ -67,7 +67,7 @@ The ESP32 has dual 240 MHz cores, integrated 802.11 b/g/n WiFi and Bluetooth Cla
     WiFi Radio              WiFi Radio
     (AP Mode)               (Station/Monitor Mode)
          |                        |
-   GhostPredator              Promiscuous
+   Wraith              Promiscuous
    192.168.4.1                (packet capture)
          |                        |
    [User Browser]            [802.11 Packets]
@@ -77,7 +77,7 @@ The ESP32 has dual 240 MHz cores, integrated 802.11 b/g/n WiFi and Bluetooth Cla
 ```
 
 The ESP32 operates in two radio modes simultaneously:
-1. **AP (Access Point)** - creates the `GhostPredator` network for the user to connect and access the control panel
+1. **AP (Access Point)** - creates the `Wraith` network for the user to connect and access the control panel
 2. **Monitor/Promiscuous** - uses the same radio to capture or inject packets on target networks
 
 The web interface is a **Single Page Application (SPA)** stored in the ESP32's LittleFS filesystem. No external dependencies - all HTML, CSS and JavaScript are served by the device itself.
@@ -99,7 +99,7 @@ Browser-to-ESP32 communication uses:
 
 ### ESP32-S3 N16R8 - Recommended Hardware
 
-The **ESP32-S3 WROOM-1 N16R8** (available on Shopee for R$13-27) is the ideal hardware for Ghost Predator Mobile:
+The **ESP32-S3 WROOM-1 N16R8** (available on Shopee for R$13-27) is the ideal hardware for Wraith:
 
 | | ESP32 D0WD-V3 | ESP32-S3 N16R8 |
 |---|---|---|
@@ -271,12 +271,12 @@ After upload completes, the ESP32 reboots automatically:
 
 1. Wait ~3 seconds for the ESP32 to initialize
 2. On your phone or laptop, open **WiFi settings**
-3. Connect to: **`GhostPredator`**
+3. Connect to: **`Wraith`**
 4. WiFi password: **`predator123`**
 5. Open browser and navigate to: **`http://192.168.4.1`**
 6. Web panel password: **`predator`**
 
-> **Tip:** You can also access via **`http://ghostpredator.local`** (mDNS) instead of typing the IP.
+> **Tip:** You can also access via **`http://wraith.local`** (mDNS) instead of typing the IP.
 
 ### Troubleshooting
 
@@ -286,7 +286,7 @@ After upload completes, the ESP32 reboots automatically:
 | COM port not detected | Driver not installed | Install CH340 (ESP32) or CH343P (S3) |
 | Blank web panel / 404 | Filesystem not uploaded | Run `uploadfs` |
 | "COM3 port does not exist" | Port changed or disconnected | Check Device Manager |
-| Upload OK but GhostPredator WiFi not found | Firmware error | Check serial: `pio device monitor` |
+| Upload OK but Wraith WiFi not found | Firmware error | Check serial: `pio device monitor` |
 | Page loads but no data | Session cookie expired | Log in again |
 
 **View real-time logs:**
@@ -301,7 +301,7 @@ pio device monitor --port COM3 --baud 115200
 ### Basic Workflow
 
 ```
-1. Connect to GhostPredator WiFi
+1. Connect to Wraith WiFi
          |
 2. Open http://192.168.4.1
          |
@@ -555,7 +555,7 @@ Each fake SSID gets a unique deterministic MAC generated via FNV-1a hash.
 
 ### Karma Attack
 
-Exploits the automatic reconnection behavior of devices searching for known networks. Ghost Predator listens for probe requests and responds with a matching fake AP.
+Exploits the automatic reconnection behavior of devices searching for known networks. Wraith listens for probe requests and responds with a matching fake AP.
 
 **Standard Karma:** responds only to received probe requests.
 
@@ -865,4 +865,4 @@ MIT - see [LICENSE](LICENSE)
 
 ---
 
-*Ghost Predator Mobile v5.0 - ESP32 Wireless Security Research Platform*
+*Wraith v5.0 - ESP32 Wireless Security Research Platform*

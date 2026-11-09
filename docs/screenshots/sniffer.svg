@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="480" viewBox="0 0 900 480">
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="900" height="480" viewBox="0 0 900 480">
   <defs><style>* { font-family: 'Segoe UI', monospace; }</style></defs>
   <rect width="900" height="480" fill="#0f0f1a"/>
   <rect width="900" height="44" fill="#13131f"/>
   <rect x="0" y="44" width="900" height="1" fill="#2d2d44"/>
   <circle cx="22" cy="22" r="12" fill="#7c3aed" opacity="0.9"/>
   <text x="22" y="26" text-anchor="middle" font-size="12" fill="white" font-weight="bold">G</text>
-  <text x="42" y="27" font-size="13" font-weight="700" fill="#e2e8f0">Ghost Predator</text>
+  <text x="42" y="27" font-size="13" font-weight="700" fill="#e2e8f0">Wraith</text>
   <text x="680" y="27" font-size="11" font-weight="700" fill="#0891b2">👁 Packet Sniffer + PMKID Fisher</text>
 
   <rect x="0" y="45" width="180" height="435" fill="#111120"/>

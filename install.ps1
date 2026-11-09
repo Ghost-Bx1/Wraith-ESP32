@@ -1,4 +1,4 @@
-# Ghost Predator Mobile — Instalador Inteligente (Windows PowerShell)
+﻿# Wraith — Instalador Inteligente (Windows PowerShell)
 # Detecta automaticamente o ESP32, chip USB-serial e porta COM
 
 $PIO = "$env:APPDATA\Python\Python314\Scripts\pio.exe"
@@ -132,8 +132,8 @@ Write-Host ""
 Write-Host "  ╔══════════════════════════════════════════════╗" -ForegroundColor Green
 Write-Host "  ║         INSTALACAO CONCLUIDA!                ║" -ForegroundColor Green
 Write-Host "  ╠══════════════════════════════════════════════╣" -ForegroundColor Green
-Write-Host "  ║  WiFi  :  GhostPredator / predator123        ║" -ForegroundColor White
-Write-Host "  ║  URL   :  http://ghostpredator.local         ║" -ForegroundColor White
+Write-Host "  ║  WiFi  :  Wraith / predator123        ║" -ForegroundColor White
+Write-Host "  ║  URL   :  http://wraith.local         ║" -ForegroundColor White
 Write-Host "  ║  IP    :  http://192.168.4.1                 ║" -ForegroundColor White
 Write-Host "  ║  Senha :  predator                           ║" -ForegroundColor White
 Write-Host "  ╚══════════════════════════════════════════════╝" -ForegroundColor Green

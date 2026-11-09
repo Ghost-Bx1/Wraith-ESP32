@@ -1,4 +1,4 @@
-# Wiring Guide - Ghost Predator Mobile
+﻿# Wiring Guide - Wraith
 
 ## Recommended Hardware: ESP32-S3 N16R8
 
@@ -87,7 +87,7 @@ ESP32-S3                    ESP8266
 
 After flashing:
 
-1. Connect to WiFi: **`GhostPredator`** / password: **`predator123`**
+1. Connect to WiFi: **`Wraith`** / password: **`predator123`**
 2. Open browser: **`http://192.168.4.1`**
 3. Web panel password: **`predator`**
-4. mDNS (alternative): **`http://ghostpredator.local`**
+4. mDNS (alternative): **`http://wraith.local`**

