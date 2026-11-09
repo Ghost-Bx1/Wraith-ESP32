@@ -1,5 +1,6 @@
 .pio/
 .vscode/
+.claude/
 *.pyc
 __pycache__/
 node_modules/

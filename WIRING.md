@@ -1,80 +1,93 @@
-# Pinagem / Wiring Guide
+# Wiring Guide - Ghost Predator Mobile
 
-## ESP32 DevKit v1 (38 pinos)
+## Recommended Hardware: ESP32-S3 N16R8
+
+The recommended board is the **ESP32-S3-WROOM-1-N16R8** (16MB Flash + 8MB OPI PSRAM).
 
 ```
-                    ┌─────────────────────┐
-               3.3V │ 3V3            GND  │ GND
-                EN  │ EN             GPIO23│
-             GPIO36 │ VP             GPIO22│
-             GPIO39 │ VN             GPIO1 │ TX0
-             GPIO34 │ GPIO34         GPIO3 │ RX0
-             GPIO35 │ GPIO35         GPIO21│
-             GPIO32 │ GPIO32         GND  │
-             GPIO33 │ GPIO33         GPIO19│
-             GPIO25 │ GPIO25         GPIO18│
-             GPIO26 │ GPIO26         GPIO5 │
-             GPIO27 │ GPIO27         GPIO17│ ← UART2 TX  (→ ESP8266 RX)
-             GPIO14 │ GPIO14         GPIO16│ ← UART2 RX  (← ESP8266 TX)
-             GPIO12 │ GPIO12         GPIO4 │
-               GND  │ GND            GPIO2 │ ← LED STATUS (onboard)
-             GPIO13 │ GPIO13         GPIO15│
-              GPIO9 │ SD2            GPIO8 │ SD3
-             GPIO10 │ SD3            GPIO7 │ CMD
-             GPIO11 │ CMD            GPIO6 │ CLK
-                5V  │ 5V             GPIO0 │
-                    └─────────────────────┘
+[ESP32-S3 N16R8 - 44 pins, 57.15mm x 27.94mm]
+
+  Left side:                   Right side:
+  3.3V  3.3V  RST              GND  TX  RX
+  GPIO4  GPIO5  GPIO6  GPIO7   GPIO1  GPIO2  GPIO42  GPIO41
+  GPIO15 GPIO16 GPIO17 GPIO18  GPIO40 GPIO39 GPIO38  GPIO37
+  GPIO8  GPIO3  GPIO46         GPIO36 GPIO35 GPIO0
+  GPIO9  GPIO10 GPIO11         GPIO45 GPIO48 GPIO47  GPIO21
+  GPIO12 GPIO13 GPIO14         GPIO20 GPIO19
+  5V                           GND  GND
+
+  RGB LED: WS2812 on GPIO 48
+  USB OTG: left USB-C (native USB, GPIO 19/20)
+  USB Serial: right USB-C (CH343P)
+  Buttons: RST (GPIO 38), BOOT (GPIO 0)
 ```
 
 ---
 
-## Conexão ESP32 → ESP8266 (Segundo Rádio WiFi)
+## USB Ports
 
-| ESP32 Pin | Fio   | ESP8266 Pin | Descrição            |
-|-----------|-------|-------------|----------------------|
-| GPIO17    | →     | RX (GPIO3)  | ESP32 TX → ESP8266 RX |
-| GPIO16    | ←     | TX (GPIO1)  | ESP8266 TX → ESP32 RX |
-| GND       | ─     | GND         | Terra compartilhado   |
-| 3.3V      | →     | VCC (3.3V)  | Alimentação          |
+| Port | Connector | Chip | Use |
+|------|-----------|------|-----|
+| Left USB-C | USB OTG | GPIO 19/20 | External USB devices + console |
+| Right USB-C | CH343P | UART | Firmware flashing (recommended) |
 
-> ⚠️ **Atenção:** O ESP8266 opera em 3.3V. **NÃO** conecte ao pino 5V.  
-> O ESP8266 deve estar com firmware AT (AT v1.7+) para funcionar com o Radio2.
+> Always use the **right USB-C** to flash firmware. Both ports support serial monitoring.
+
+---
+
+## ESP32-S3 -> ESP8266 (Second WiFi Radio)
+
+Connect an ESP8266 as a secondary radio via UART2:
+
+| ESP32-S3 Pin | Wire | ESP8266 Pin | Description |
+|---|---|---|---|
+| GPIO17 (TX2) | -> | RX (GPIO3) | ESP32 TX -> ESP8266 RX |
+| GPIO16 (RX2) | <- | TX (GPIO1) | ESP8266 TX -> ESP32 RX |
+| GND | - | GND | Shared ground |
+| 3.3V | -> | VCC (3.3V) | Power |
+
+> The ESP8266 must have AT firmware (v1.7+). Do NOT connect to 5V.
 
 ```
-ESP32                       ESP8266 (NodeMCU / bare module)
-┌──────────┐               ┌──────────┐
-│ GPIO17   │──────────────▶│ RX       │
-│ GPIO16   │◀──────────────│ TX       │
-│ GND      │───────────────│ GND      │
-│ 3.3V     │───────────────│ VCC      │
-└──────────┘               └──────────┘
+ESP32-S3                    ESP8266
++----------+               +----------+
+| GPIO17   |-------------->| RX       |
+| GPIO16   |<--------------| TX       |
+| GND      |---------------| GND      |
+| 3.3V     |---------------| VCC      |
++----------+               +----------+
 ```
 
 ---
 
-## LED de Status (GPIO2)
+## RGB LED Status (GPIO 48 - WS2812 built-in)
 
-| Estado                  | Padrão           |
-|-------------------------|------------------|
-| Tudo inativo            | LED fixo ligado  |
-| Sniffer ativo           | Pisca 150ms      |
-| Deauth / Beacon / Twin  | Pisca 800ms      |
-| Boot                    | LED apagado      |
-
----
-
-## Alimentação
-
-| Fonte       | Tensão | Corrente mín. | Observação                    |
-|-------------|--------|---------------|-------------------------------|
-| USB (micro) | 5V     | 500 mA        | Suficiente para ESP32 sozinho |
-| USB + ESP8266 | 5V   | 800 mA        | Use USB 3.0 ou hub ativo      |
-| LiPo (bateria) | 3.7V | 1A+          | Via pino VIN + regulador 3.3V |
+| State | Pattern |
+|-------|---------|
+| Idle | Solid blue |
+| Booting | Green flash |
+| Sniffer active | Slow blink (150ms) |
+| Attack active | Fast blink (800ms) |
+| Capture found | White flash |
 
 ---
 
-## Acesso ao Painel
+## Power Options
 
-1. Conecte no WiFi: **`ESP32-Pentest`** / senha: **`pentest123`**
-2. Abra: **`http://cluster.local`** ← mDNS (recomendado)
-3. Ou: **`http://192.168.4.1`** ← IP direto (fallback)
+| Source | Voltage | Min Current | Notes |
+|--------|---------|-------------|-------|
+| USB-C (cable) | 5V | 500mA | Sufficient for ESP32 alone |
+| USB-C + ESP8266 | 5V | 800mA | Use USB 3.0 or powered hub |
+| LiPo battery | 3.7V | 1A+ | Via VIN pin + 3.3V regulator |
+| Power bank | 5V | 1A+ | Recommended for portable use |
+
+---
+
+## First Access
+
+After flashing:
+
+1. Connect to WiFi: **`GhostPredator`** / password: **`predator123`**
+2. Open browser: **`http://192.168.4.1`**
+3. Web panel password: **`predator`**
+4. mDNS (alternative): **`http://ghostpredator.local`**
