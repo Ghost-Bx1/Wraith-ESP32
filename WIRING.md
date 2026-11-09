@@ -87,7 +87,7 @@ ESP32-S3                    ESP8266
 
 After flashing:
 
-1. Connect to WiFi: **`Wraith`** / password: **`predator123`**
+1. Connect to WiFi: **`Wraith`** / password: **`wraith123`**
 2. Open browser: **`http://192.168.4.1`**
-3. Web panel password: **`predator`**
+3. Web panel password: **`wraith`**
 4. mDNS (alternative): **`http://wraith.local`**

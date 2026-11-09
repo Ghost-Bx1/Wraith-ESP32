@@ -2,7 +2,7 @@
 /*
  * Session Token — Melhoria #46
  * Token de sessão gerado aleatoriamente no boot (32 hex chars).
- * Autenticação: POST /api/auth { "pass": "predator" } → retorna token.
+ * Autenticação: POST /api/auth { "pass": "wraith" } → retorna token.
  * Todas as outras rotas exigem header  X-Token: <token>  ou param ?token=<token>
  * Expiração: SESSION_TTL_MS (padrão 24h). Re-login necessário após expirar.
  */

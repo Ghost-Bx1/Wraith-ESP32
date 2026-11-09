@@ -57,12 +57,12 @@ O LED WS2812 no GPIO 48 indica o estado atual do sistema em tempo real:
 | Item | Valor |
 |------|-------|
 | **Rede WiFi** | Wraith |
-| **Senha WiFi** | predator123 |
+| **Senha WiFi** | wraith123 |
 | **IP do painel** | http://192.168.4.1 |
 | **URL alternativa** | http://wraith.local |
-| **Senha do painel** | predator |
+| **wraith|
 
-> Primeiro acesso: conecte ao WiFi "Wraith" com senha **predator123**, depois abra http://192.168.4.1 no navegador.
+> Primeiro acesso: conecte ao WiFi "Wraith" com senha **wraith123**, depois abra http://192.168.4.1 no navegador.
 
 ---
 
@@ -1383,11 +1383,11 @@ Passo 3 - Coletar credenciais
 
 2. Conecte ao WiFi
    Rede:  Wraith
-   Senha: predator123
+   Senha: wraith123
 
 3. Acesse o painel
    → http://192.168.4.1
-   → Senha: predator
+   → Senha: wraith
 
 4. Faca o scan
    → WiFi Scanner → Scan
@@ -1424,7 +1424,7 @@ O ESP32-S3 expoe um console serial nativo via USB CDC (sem CH343). Permite log e
 
 | API | Metodo | Descricao |
 |-----|--------|-----------|
-| `/api/auth` | POST `{"pass":"predator"}` | Login com token de sessao (24h) |
+| `/api/auth` | POST `{"pass":"wraith"}` | Login com token de sessao (24h) |
 | `/api/auth/validate` | GET `?token=<tok>` | Valida token ativo |
 
 **Auto-destruct (#48):** apos 10 senhas erradas consecutivas, todas as capturas sao apagadas automaticamente. Configuravel em `config.h` → `AUTODESTRUCT_TRIES`.
@@ -1676,7 +1676,7 @@ hashcat -m 22000 hs_MinhaRede.hc22000 rockyou.txt
 | Problema | Causa provavel | Solucao |
 |----------|---------------|---------|
 | Rede Wraith nao aparece | Dispositivo nao inicializou | Aguarde 5s e atualize a lista de WiFi |
-| "Nao foi possivel conectar" | Senha errada salva no Windows | Clique direito → Esquecer → Reconectar com "predator123" |
+| "Nao foi possivel conectar" | Senha errada salva no Windows | Clique direito → Esquecer → Reconectar com "wraith123" |
 | Painel nao carrega | IP errado | Use http://192.168.4.1 (nao HTTPS) |
 | LED sempre verde | GPIO do LED incorreto | Altere RGB_LED_PIN para 38 em config.h e regrave |
 | LED nao acende | GPIO do LED incorreto | Altere RGB_LED_PIN para 48 em config.h e regrave |

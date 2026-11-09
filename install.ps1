@@ -132,9 +132,9 @@ Write-Host ""
 Write-Host "  ╔══════════════════════════════════════════════╗" -ForegroundColor Green
 Write-Host "  ║         INSTALACAO CONCLUIDA!                ║" -ForegroundColor Green
 Write-Host "  ╠══════════════════════════════════════════════╣" -ForegroundColor Green
-Write-Host "  ║  WiFi  :  Wraith / predator123        ║" -ForegroundColor White
+Write-Host "  ║  WiFi  :  Wraith / wraith123        ║" -ForegroundColor White
 Write-Host "  ║  URL   :  http://wraith.local         ║" -ForegroundColor White
 Write-Host "  ║  IP    :  http://192.168.4.1                 ║" -ForegroundColor White
-Write-Host "  ║  Senha :  predator                           ║" -ForegroundColor White
+Write-Host "  ║  Senha :  wraith                           ║" -ForegroundColor White
 Write-Host "  ╚══════════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""

@@ -272,9 +272,9 @@ After upload completes, the ESP32 reboots automatically:
 1. Wait ~3 seconds for the ESP32 to initialize
 2. On your phone or laptop, open **WiFi settings**
 3. Connect to: **`Wraith`**
-4. WiFi password: **`predator123`**
+4. WiFi password: **`wraith123`**
 5. Open browser and navigate to: **`http://192.168.4.1`**
-6. Web panel password: **`predator`**
+6. Web panel password: **`wraith`**
 
 > **Tip:** You can also access via **`http://wraith.local`** (mDNS) instead of typing the IP.
 
@@ -305,7 +305,7 @@ pio device monitor --port COM3 --baud 115200
          |
 2. Open http://192.168.4.1
          |
-3. Log in (password: predator)
+3. Log in (password: wraith)
          |
 4. Run WiFi Scanner
          |
