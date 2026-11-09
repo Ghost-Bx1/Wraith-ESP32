@@ -90,8 +90,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 .logo-wrap{display:flex;align-items:center;gap:9px}
 .logo-icon{font-size:1.25rem;filter:drop-shadow(0 0 8px rgba(168,85,247,.6))}
 .logo-text{font-weight:800;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase}
-.logo-text .lt-ghost{background:linear-gradient(135deg,var(--text),var(--muted2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-text .lt-pred{background:linear-gradient(135deg,var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-text .lt-wraith{background:linear-gradient(135deg,var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .topbar-sep{width:1px;height:20px;background:var(--border2)}
 #atk-badges{display:flex;gap:5px;align-items:center}
 .atk-badge{display:flex;align-items:center;gap:3px;font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid var(--border);color:var(--muted);background:transparent;transition:.2s;letter-spacing:.05em;text-transform:uppercase}
@@ -275,8 +274,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 
 /* ── LOGO GRADIENT FIX (light theme) ─────────────────────────────────────*/
-[data-theme="light"] .logo-text .lt-ghost{background:linear-gradient(135deg,var(--text),var(--muted2));-webkit-background-clip:text;background-clip:text}
-[data-theme="light"] .logo-text .lt-pred{background:linear-gradient(135deg,var(--accent),#6d28d9);-webkit-background-clip:text;background-clip:text}
+[data-theme="light"] .logo-text .lt-wraith{background:linear-gradient(135deg,var(--accent),#6d28d9);-webkit-background-clip:text;background-clip:text}
 [data-theme="light"] .card-icon::after{display:none}
 [data-theme="light"] .stat-box::before{background:linear-gradient(135deg,rgba(0,0,0,.03) 0%,transparent 60%)}
 
@@ -297,8 +295,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="login-logo">
       <span class="login-badge">v5.0 &nbsp;·&nbsp; ESP32</span>
       <i class="fa-solid fa-ghost ghost-icon"></i>
-      <h1>Ghost <span>Predator</span> Mobile</h1>
-      <p>Wireless Security Assessment Platform</p>
+      <h1><span>Wraith</span></h1>
+      <p>Wireless Security Research Platform</p>
     </div>
     <div class="login-divider"></div>
     <div class="login-field">
@@ -348,7 +346,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 <div id="topbar">
   <div class="logo-wrap">
     <i class="fa-solid fa-ghost logo-icon" style="color:var(--accent2)"></i>
-    <div class="logo-text"><span class="lt-ghost">Ghost</span> <span class="lt-pred">Predator</span></div>
+    <div class="logo-text"><span class="lt-wraith">Wraith</span></div>
   </div>
   <div class="topbar-sep"></div>
   <div id="atk-badges">
@@ -364,6 +362,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     <div class="sys-chip" id="chip-ch" title="Canal WiFi atual do sniffer">CH --</div>
     <div class="sys-chip" id="chip-hs-badge" title="Handshakes + PMKIDs capturados" style="display:none;color:var(--green);border-color:rgba(34,197,94,.4)"><i class="fa-solid fa-key" style="font-size:.55rem"></i> <span id="chip-hs-count">0</span></div>
     <div class="sys-chip" id="chip-uptime" title="Uptime do dispositivo">00:00:00</div>
+    <button class="icon-btn" onclick="openQR()" title="QR Code - conectar ao Wraith AP"><i class="fa-solid fa-qrcode"></i></button>
     <button class="icon-btn" id="btn-sound" onclick="toggleSound()" title="Alertas sonoros (ativo)"><i class="fa-solid fa-volume-high" id="sound-icon"></i></button>
     <button class="icon-btn" id="btn-stealth" onclick="toggleStealth()" title="Stealth Mode - reduz transmissao e atividade visivel"><i class="fa-solid fa-user-ninja"></i></button>
     <button class="icon-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro"><i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i></button>
@@ -449,7 +448,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
     </div>
     <div class="mini-stats" id="scan-mini-stats" style="display:none">
       <div class="mini-stat"><i class="fa-solid fa-lock-open" style="color:var(--green)"></i> Open: <b id="ms-open">0</b></div>
-      <div class="mini-stat"><i class="fa-solid fa-lock" style="color:var(--red)"></i> WPA2/3: <b id="ms-wpa2">0</b></div>
+      <div class="mini-stat"><i class="fa-solid fa-lock" style="color:var(--red)"></i> WPA2: <b id="ms-wpa2">0</b></div>
+      <div class="mini-stat"><i class="fa-solid fa-shield-halved" style="color:var(--cyan)"></i> WPA3: <b id="ms-wpa3">0</b></div>
       <div class="mini-stat"><i class="fa-solid fa-eye-slash" style="color:var(--muted)"></i> Hidden: <b id="ms-hidden">0</b></div>
       <div class="mini-stat"><i class="fa-solid fa-signal" style="color:var(--cyan)"></i> Forte (&gt;-60dBm): <b id="ms-strong">0</b></div>
     </div>
@@ -1371,6 +1371,7 @@ async function doChangePass() {
       document.getElementById('app').style.display = 'flex';
       wsConnect();
       pollStatus();
+      _loadQRLib(() => {}); // pre-carrega QR lib em background
     }
   } catch(_) {}
 })();
@@ -1793,19 +1794,20 @@ function renderAPTable(data) {
     const pct = rssiToQuality(ap.rssi);
     const authNames = ['Open','WEP','WPA','WPA2','WPA/WPA2','WPA3'];
     const auth = authNames[ap.auth] || '?';
-    const authBadge = ap.auth===0 ? 'badge-grn' : ap.auth>=3 ? 'badge-red' : 'badge-yel';
+    const authBadge = ap.auth===0 ? 'badge-grn' : ap.auth===5 ? 'badge-cyan' : ap.auth>=3 ? 'badge-red' : 'badge-yel';
     const dist = rssiToDistance(ap.rssi);
     const qual = pct;
     const vendor = ouiLookup(ap.bssid) || '<span style="color:var(--muted)">-</span>';
     const rssiColor = ap.rssi > -60 ? 'var(--green)' : ap.rssi > -75 ? 'var(--yellow)' : 'var(--red)';
     const hiddenBadge = ap.hidden ? '<span class="badge badge-yel" style="font-size:.55rem;margin-left:3px">HIDDEN</span>' : '';
     const wpsBadge = ap.wps ? '<span class="badge badge-red" style="font-size:.55rem;margin-left:3px">WPS</span>' : '';
+    const wpa3Badge = ap.auth===5 ? '<span class="badge badge-cyan" style="font-size:.55rem;margin-left:3px"><i class="fa-solid fa-shield-halved"></i> WPA3</span>' : '';
     const isSel = _selAP && _selAP.bssid === ap.bssid;
     const tr = document.createElement('tr');
     tr.dataset.bssid = ap.bssid;
     if (isSel) tr.style.cssText = 'background:rgba(239,68,68,.07);outline:1px solid rgba(239,68,68,.25)';
     tr.innerHTML = `
-      <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b>${hiddenBadge}${wpsBadge}</td>
+      <td><b>${esc(ap.ssid)||'<i style="color:var(--muted)">hidden</i>'}</b>${hiddenBadge}${wpsBadge}${wpa3Badge}</td>
       <td class="mono" style="font-size:.7rem">${ap.bssid} <button class="btn btn-ghost" style="padding:1px 4px;font-size:.55rem" title="Copiar BSSID" onclick="navigator.clipboard.writeText('${ap.bssid}');showToast('BSSID copiado')"><i class="fa-solid fa-copy"></i></button></td>
       <td style="text-align:center">${ap.channel}</td>
       <td><div class="rssi-pill">${sigBars(qual,rssiColor)}<span style="color:${rssiColor};font-size:.72rem">${ap.rssi}dBm</span></div></td>
@@ -1835,7 +1837,8 @@ async function wifiScan() {
   // Mini stats
   document.getElementById('scan-mini-stats').style.display = data.length ? 'flex' : 'none';
   setText('ms-open', data.filter(a => a.auth===0).length);
-  setText('ms-wpa2', data.filter(a => a.auth>=3).length);
+  setText('ms-wpa2', data.filter(a => a.auth>=3 && a.auth!==5).length);
+  setText('ms-wpa3', data.filter(a => a.auth===5).length);
   setText('ms-hidden', data.filter(a => !a.ssid || a.ssid.length===0).length);
   setText('ms-strong', data.filter(a => a.rssi > -60).length);
   renderAPTable(data);
@@ -2934,7 +2937,66 @@ function fmtUp(sec) {
 }
 function pad(n){ return String(n).padStart(2,'0'); }
 function fmtB(b){ return b>1024?(b/1024).toFixed(0)+'KB':b+'B'; }
+
+// ── QR CODE MODAL ─────────────────────────────────────────────────────────────
+function openQR() {
+  const modal = document.getElementById('qr-modal');
+  modal.style.display = 'flex';
+  const container = document.getElementById('qr-canvas-wrap');
+  container.innerHTML = '';
+  // Formato padrão WiFi QR: WIFI:T:WPA;S:SSID;P:senha;;
+  const wifiStr = 'WIFI:T:WPA;S:Wraith;P:predator123;;';
+  if (window._QRCode) {
+    new window._QRCode(container, { text: wifiStr, width: 220, height: 220,
+      colorDark:'#ffffff', colorLight:'#13131f', correctLevel: window._QRCode.CorrectLevel.M });
+  } else {
+    // Fallback: link para gerador externo não disponível no dispositivo
+    container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:.8rem">QR: carregando...</div>';
+    _loadQRLib(() => {
+      container.innerHTML = '';
+      new window._QRCode(container, { text: wifiStr, width: 220, height: 220,
+        colorDark:'#ffffff', colorLight:'#13131f', correctLevel: window._QRCode.CorrectLevel.M });
+    });
+  }
+}
+function _loadQRLib(cb) {
+  if (window._QRCode) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+  s.onload = () => { window._QRCode = window.QRCode; cb(); };
+  document.head.appendChild(s);
+}
+function closeQR() { document.getElementById('qr-modal').style.display = 'none'; }
 </script>
+
+<!-- ── QR Code Modal ─────────────────────────────────────────────────────── -->
+<div id="qr-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center" onclick="if(event.target===this)closeQR()">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:28px 32px;text-align:center;min-width:280px;box-shadow:var(--shadow)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <i class="fa-solid fa-qrcode" style="color:var(--accent2)"></i>
+        <span style="font-size:.85rem;font-weight:600">Conectar ao Wraith</span>
+      </div>
+      <button class="icon-btn" onclick="closeQR()" style="font-size:.7rem"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="qr-canvas-wrap" style="background:#13131f;padding:16px;border-radius:10px;display:inline-block;border:1px solid var(--border)"></div>
+    <div style="margin-top:14px;display:grid;gap:5px;text-align:left">
+      <div style="display:flex;justify-content:space-between;font-size:.75rem;border-bottom:1px solid var(--border);padding-bottom:5px">
+        <span style="color:var(--muted)">WiFi</span>
+        <span class="mono" style="color:var(--accent3)">Wraith</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.75rem;border-bottom:1px solid var(--border);padding-bottom:5px">
+        <span style="color:var(--muted)">Senha</span>
+        <span class="mono" style="color:var(--green)">predator123</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.75rem">
+        <span style="color:var(--muted)">Painel</span>
+        <span class="mono" style="color:var(--cyan)">192.168.4.1</span>
+      </div>
+    </div>
+    <p style="font-size:.65rem;color:var(--muted);margin-top:12px">Escaneie com a camera do celular para conectar</p>
+  </div>
+</div>
 </body>
 </html>
 

@@ -24,7 +24,7 @@
 
 ## Table of Contents
 
-1. [What is Wraith](#what-is-ghost-predator-mobile)
+1. [What is Wraith](#what-is-wraith)
 2. [How it Works](#how-it-works)
 3. [Supported Hardware](#supported-hardware)
 4. [Installation](#installation)
@@ -182,7 +182,7 @@ cd Ghost-Raptor-Mobile-ESP32
 
 **Project structure:**
 ```
-Ghost-Raptor-Mobile-ESP32/
+Wraith/
 +-- src/
 |   +-- main.cpp              # Main loop, WiFi/BLE setup
 |   +-- config.h              # Passwords, limits, pins
@@ -717,7 +717,7 @@ Detects nearby Bluetooth Classic (BR/EDR) devices in discoverable mode. Shows na
 ### Project Structure
 
 ```
-Ghost-Raptor-Mobile-ESP32/
+Wraith/
 +-- src/
 |   +-- main.cpp              # Setup, FreeRTOS tasks, main loop
 |   +-- config.h              # Constants: AP credentials, ports, limits
