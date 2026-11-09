@@ -176,8 +176,8 @@ pio --version
 ### Step 2 - Clone the Repository
 
 ```bash
-git clone https://github.com/Ghost-Bx1/Ghost-Raptor-Mobile-ESP32.git
-cd Ghost-Raptor-Mobile-ESP32
+git clone https://github.com/Ghost-Bx1/Ghost-Raptor-Mobile-ESP32.git Wraith
+cd Wraith
 ```
 
 **Project structure:**
