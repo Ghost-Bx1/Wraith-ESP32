@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+  <defs><style>* { font-family: 'Segoe UI', system-ui, sans-serif; }</style></defs>
+  <rect width="900" height="520" fill="#0f0f1a"/>
+  <rect width="900" height="44" fill="#13131f"/>
+  <rect y="44" width="900" height="1" fill="#2d2d44"/>
+  <circle cx="22" cy="22" r="12" fill="#7c3aed" opacity="0.9"/>
+  <text x="22" y="27" text-anchor="middle" font-size="13" fill="white" font-weight="bold">W</text>
+  <text x="42" y="28" font-size="13" font-weight="700" fill="#e2e8f0">Wraith</text>
+  <text x="108" y="28" font-size="10" fill="#7c3aed">v5.0</text>
+  <rect x="560" y="12" width="52" height="20" rx="4" fill="#22c55e14" stroke="#059669" stroke-width="1"/>
+  <circle cx="571" cy="22" r="3" fill="#22c55e"/>
+  <text x="578" y="26" font-size="9" fill="#22c55e" font-weight="600">SNIFFER</text>
+  <rect x="618" y="12" width="52" height="20" rx="4" fill="#dc262614" stroke="#dc2626" stroke-width="1" class="pulse"/>
+  <circle cx="629" cy="22" r="3" fill="#dc2626"/>
+  <text x="636" y="26" font-size="9" fill="#dc2626" font-weight="600">DEAUTH</text>
+  <text x="740" y="28" font-size="10" fill="#94a3b8">CH:6  RAM:168KB  00:12:47</text>
+  <circle cx="876" cy="22" r="5" fill="#22c55e"/>
+  <!-- Sidebar -->
+  <rect x="0" y="45" width="170" height="475" fill="#111120"/>
+  <rect x="170" y="45" width="1" height="475" fill="#2d2d44"/>
+  <text x="14" y="72" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">RECON</text>
+  <text x="16" y="96" font-size="11" fill="#475569">◎ WiFi Scanner</text>
+  <text x="16" y="124" font-size="11" fill="#475569">◎ Packet Sniffer</text>
+  <text x="16" y="152" font-size="11" fill="#475569">◎ Probe Requests</text>
+  <text x="16" y="180" font-size="11" fill="#475569">◎ Hidden Scanner</text>
+  <text x="14" y="208" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">ATTACKS</text>
+  <text x="16" y="232" font-size="11" fill="#475569">◎ Auto-Attack</text>
+  <rect x="0" y="240" width="170" height="30" fill="#dc262618"/>
+  <rect x="0" y="240" width="2" height="30" fill="#dc2626"/>
+  <text x="16" y="260" font-size="11" fill="#f87171" font-weight="600">◉ Deauth</text>
+  <text x="16" y="288" font-size="11" fill="#475569">◎ Evil Twin</text>
+  <text x="16" y="316" font-size="11" fill="#475569">◎ Beacon Flood</text>
+  <text x="16" y="344" font-size="11" fill="#475569">◎ Karma</text>
+  <text x="14" y="372" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">CAPTURE</text>
+  <text x="16" y="396" font-size="11" fill="#475569">◎ PMKID Fisher</text>
+  <text x="16" y="424" font-size="11" fill="#475569">◎ WPS Scanner</text>
+  <text x="16" y="452" font-size="11" fill="#475569">◎ Target Intel</text>
+  <rect x="0" y="472" width="170" height="1" fill="#2d2d44"/>
+  <text x="14" y="490" font-size="10" fill="#475569">SSID: Wraith  |  192.168.4.1</text>
+  <text x="14" y="508" font-size="10" fill="#7c3aed">wraith.local</text>
+  <!-- Main panel -->
+  <rect x="186" y="56" width="698" height="448" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <rect x="186" y="56" width="698" height="42" rx="6" fill="#13131f"/>
+  <rect x="186" y="84" width="698" height="14" fill="#13131f"/>
+  <text x="206" y="82" font-size="12" font-weight="600" fill="#e2e8f0">Deauth Attack</text>
+  <!-- Target info box -->
+  <rect x="186" y="106" width="698" height="68" fill="#dc262608"/>
+  <text x="206" y="124" font-size="10" fill="#475569" font-weight="600">ALVO</text>
+  <text x="246" y="124" font-size="11" fill="#f87171" font-weight="600">NET-Escritorio</text>
+  <text x="206" y="142" font-size="10" fill="#475569">BSSID:</text>
+  <text x="246" y="142" font-size="10" fill="#94a3b8" font-family="monospace">AA:BB:CC:11:22:33</text>
+  <text x="406" y="142" font-size="10" fill="#475569">Canal:</text>
+  <text x="446" y="142" font-size="10" fill="#7c3aed" font-weight="600">6</text>
+  <text x="490" y="142" font-size="10" fill="#475569">RSSI:</text>
+  <text x="526" y="142" font-size="10" fill="#22c55e">-42 dBm</text>
+  <text x="206" y="160" font-size="10" fill="#475569">Cliente alvo:</text>
+  <text x="286" y="160" font-size="10" fill="#94a3b8" font-family="monospace">FF:FF:FF:FF:FF:FF (broadcast - todos os clientes)</text>
+  <!-- Mode buttons -->
+  <text x="206" y="196" font-size="10" fill="#475569" font-weight="600">INTENSIDADE</text>
+  <rect x="206" y="202" width="90" height="30" rx="4" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="251" y="221" text-anchor="middle" font-size="10" fill="#94a3b8">Soft (64)</text>
+  <rect x="304" y="202" width="90" height="30" rx="4" fill="#7c3aed"/>
+  <text x="349" y="221" text-anchor="middle" font-size="10" fill="white" font-weight="700">Normal (256)</text>
+  <rect x="402" y="202" width="104" height="30" rx="4" fill="#1e293b" stroke="#dc2626" stroke-width="1"/>
+  <text x="454" y="221" text-anchor="middle" font-size="10" fill="#f87171">Aggressive (512)</text>
+  <!-- Techniques -->
+  <text x="206" y="258" font-size="10" fill="#475569" font-weight="600">TECNICAS ATIVAS</text>
+  <rect x="206" y="264" width="80" height="22" rx="3" fill="#dc262620" stroke="#dc2626" stroke-width="1"/>
+  <text x="246" y="279" text-anchor="middle" font-size="9" fill="#f87171" font-weight="600">Deauth AP->STA</text>
+  <rect x="294" y="264" width="80" height="22" rx="3" fill="#dc262620" stroke="#dc2626" stroke-width="1"/>
+  <text x="334" y="279" text-anchor="middle" font-size="9" fill="#f87171" font-weight="600">Deauth STA->AP</text>
+  <rect x="382" y="264" width="80" height="22" rx="3" fill="#dc262620" stroke="#dc2626" stroke-width="1"/>
+  <text x="422" y="279" text-anchor="middle" font-size="9" fill="#f87171" font-weight="600">Disassoc</text>
+  <rect x="470" y="264" width="80" height="22" rx="3" fill="#47556920" stroke="#475569" stroke-width="1"/>
+  <text x="510" y="279" text-anchor="middle" font-size="9" fill="#64748b">SA Query Flood</text>
+  <rect x="558" y="264" width="80" height="22" rx="3" fill="#47556920" stroke="#475569" stroke-width="1"/>
+  <text x="598" y="279" text-anchor="middle" font-size="9" fill="#64748b">Auth Flood</text>
+  <!-- Stats -->
+  <rect x="206" y="302" width="120" height="52" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="266" y="325" text-anchor="middle" font-size="22" font-weight="700" fill="#dc2626">4,872</text>
+  <text x="266" y="344" text-anchor="middle" font-size="9" fill="#64748b">Pacotes enviados</text>
+  <rect x="336" y="302" width="120" height="52" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="396" y="325" text-anchor="middle" font-size="22" font-weight="700" fill="#d97706">12</text>
+  <text x="396" y="344" text-anchor="middle" font-size="9" fill="#64748b">Clientes desconectados</text>
+  <rect x="466" y="302" width="120" height="52" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="526" y="325" text-anchor="middle" font-size="22" font-weight="700" fill="#22c55e">2</text>
+  <text x="526" y="344" text-anchor="middle" font-size="9" fill="#64748b">Handshakes capturados</text>
+  <rect x="596" y="302" width="120" height="52" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="656" y="325" text-anchor="middle" font-size="22" font-weight="700" fill="#94a3b8">256/s</text>
+  <text x="656" y="344" text-anchor="middle" font-size="9" fill="#64748b">Taxa de envio</text>
+  <!-- Log -->
+  <rect x="186" y="366" width="698" height="130" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="206" y="384" font-size="10" fill="#475569" font-weight="600">LOG DE ATAQUE</text>
+  <text x="206" y="402" font-size="9" fill="#22c55e">[14:22:14] HANDSHAKE capturado de D4:E8:53:AB:CD:12 ao reconectar</text>
+  <text x="206" y="418" font-size="9" fill="#dc2626">[14:22:12] DEAUTH AA:BB:CC:11:22:33 → D4:E8:53:AB:CD:12 (reason 3)</text>
+  <text x="206" y="434" font-size="9" fill="#dc2626">[14:22:11] DEAUTH AA:BB:CC:11:22:33 → BC:5F:F4:98:76:21 (reason 7)</text>
+  <text x="206" y="450" font-size="9" fill="#d97706">[14:22:10] DISASSOC AA:BB:CC:11:22:33 → FF:FF:FF:FF:FF:FF (reason 1)</text>
+  <text x="206" y="466" font-size="9" fill="#94a3b8">[14:22:08] Iniciando deauth loop - CH6 - modo: Normal (256 pkts)</text>
+  <text x="206" y="482" font-size="9" fill="#94a3b8">[14:22:08] Alvo confirmado: NET-Escritorio | 4 clientes ativos</text>
+  <!-- Stop button -->
+  <rect x="726" y="302" width="140" height="52" rx="4" fill="#dc2626"/>
+  <text x="796" y="332" text-anchor="middle" font-size="13" fill="white" font-weight="700">■ PARAR</text>
+  <text x="796" y="348" text-anchor="middle" font-size="9" fill="#fca5a5">Ataque ativo: 4m47s</text>
+</svg>

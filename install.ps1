@@ -1,4 +1,4 @@
-﻿# Wraith — Instalador Inteligente (Windows PowerShell)
+﻿# Wraith - Instalador Inteligente (Windows PowerShell)
 # Detecta automaticamente o ESP32, chip USB-serial e porta COM
 
 $PIO = "$env:APPDATA\Python\Python314\Scripts\pio.exe"
@@ -22,7 +22,7 @@ function Banner {
     Write-Host "  ╚██████╔╝██║  ██║╚██████╔╝███████║   ██║   " -ForegroundColor Magenta
     Write-Host "   ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   " -ForegroundColor Magenta
     Write-Host ""
-    Write-Host "  PREDATOR MOBILE v3.3 — Instalador Automatico" -ForegroundColor Cyan
+    Write-Host "  WRAITH v5.0 - Instalador Automatico" -ForegroundColor Cyan
     Write-Host "  ─────────────────────────────────────────────" -ForegroundColor DarkGray
     Write-Host ""
 }

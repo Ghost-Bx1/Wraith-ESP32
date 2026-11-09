@@ -155,7 +155,7 @@ void setup() {
     while (!Serial && millis() - _usbWait < 2000) delay(10);
     USB.begin();
 #endif
-    Serial.println("\n\n=== Wraith v4.0 ===");
+    Serial.println("\n\n=== Wraith v5.0 ===");
 
     // LED RGB — pisca branco no boot
     RGBLed::get().begin();
@@ -225,7 +225,7 @@ void setup() {
     xTaskCreatePinnedToCore(bleTask,    "ble_spam", 4096, nullptr, 1, nullptr, 1);
 
     digitalWrite(LED_STATUS, HIGH);
-    LOG.success("Wraith v4.0 | AP: " AP_SSID " | http://" MDNS_HOST ".local");
+    LOG.success("Wraith v5.0 | AP: " AP_SSID " | http://" MDNS_HOST ".local");
     LOG.info("Heap: " + String(ESP.getFreeHeap() / 1024) + " KB livre");
 }
 

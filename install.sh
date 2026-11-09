@@ -1,5 +1,5 @@
 ﻿#!/bin/bash
-# Wraith — Instalador Inteligente (Linux / macOS)
+# Wraith - Instalador Inteligente (Linux / macOS)
 
 set -e
 
@@ -16,7 +16,7 @@ banner() {
     echo -e "${MAG}  ╚██████╔╝██║  ██║╚██████╔╝███████║   ██║   ${NC}"
     echo -e "${MAG}   ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝  ${NC}"
     echo ""
-    echo -e "${CYN}  PREDATOR MOBILE v3.3 — Instalador Automatico${NC}"
+    echo -e "${CYN}  WRAITH v5.0 - Instalador Automatico${NC}"
     echo -e "\033[90m  ─────────────────────────────────────────────${NC}"
     echo ""
 }

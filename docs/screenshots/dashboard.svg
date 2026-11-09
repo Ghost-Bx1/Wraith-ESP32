@@ -30,7 +30,7 @@
   <circle cx="22" cy="22" r="12" fill="#7c3aed" opacity="0.9"/>
   <text x="22" y="26" text-anchor="middle" font-size="12" fill="white" font-weight="bold">G</text>
   <text x="42" y="27" font-size="13" font-weight="700" fill="#e2e8f0">Wraith</text>
-  <text x="152" y="27" font-size="10" fill="#7c3aed">Mobile v3.5</text>
+  <text x="152" y="27" font-size="10" fill="#7c3aed">v5.0</text>
   <!-- Status chips topbar -->
   <rect x="660" y="12" width="52" height="20" rx="4" class="badge-green"/>
   <circle cx="671" cy="22" r="3" fill="#22c55e"/>
@@ -101,15 +101,15 @@
   <circle cx="668" cy="150" r="5" fill="#22c55e" opacity="0.6"/>
   <!-- Log lines -->
   <text x="208" y="192" font-size="9.5" fill="#22c55e">[00:01:23] [SUCCESS] PMKID capturado: AA:BB:CC:11:22:33</text>
-  <text x="208" y="208" font-size="9.5" fill="#d97706">[00:01:19] [WARN] Karma Attack ativo — respondendo probes...</text>
+  <text x="208" y="208" font-size="9.5" fill="#d97706">[00:01:19] [WARN] Karma Attack ativo - respondendo probes...</text>
   <text x="208" y="224" font-size="9.5" fill="#0891b2">[00:01:15] [DATA] [PROBE] D4:E8:53:... → "Claro_Guest"</text>
   <text x="208" y="240" font-size="9.5" fill="#22c55e">[00:01:11] [SUCCESS] Handshake M1+M2 completo: AA:BB:CC:...</text>
   <text x="208" y="256" font-size="9.5" fill="#dc2626">[00:01:08] [WARN] [DEAUTH] AA:BB:CC:11:22:33 → BROADCAST ch6</text>
-  <text x="208" y="272" font-size="9.5" fill="#94a3b8">[00:01:02] [INFO] Sniffer ativo — hop: sim</text>
+  <text x="208" y="272" font-size="9.5" fill="#94a3b8">[00:01:02] [INFO] Sniffer ativo - hop: sim</text>
   <text x="208" y="288" font-size="9.5" fill="#94a3b8">[00:00:58] [INFO] AP: Wraith → 192.168.4.1</text>
   <text x="208" y="304" font-size="9.5" fill="#d97706">[00:00:45] [WARN] [WIFITE] 5 alvos | PMKID → Deauth → ET</text>
   <text x="208" y="320" font-size="9.5" fill="#22c55e">[00:00:30] [SUCCESS] mDNS: http://wraith.local</text>
-  <text x="208" y="336" font-size="9.5" fill="#94a3b8">[00:00:01] Wraith v3.5 iniciado</text>
+  <text x="208" y="336" font-size="9.5" fill="#94a3b8">[00:00:01] Wraith v5.0 iniciado</text>
 
   <!-- Status card -->
   <rect x="710" y="134" width="172" height="280" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
@@ -169,5 +169,5 @@
 
   <!-- Title overlay -->
   <rect x="196" y="500" width="690" height="18" rx="3" fill="#0f0f1a" opacity="0.7"/>
-  <text x="541" y="513" text-anchor="middle" font-size="9" fill="#7c3aed">Wraith v3.5 — ESP32 WiFi/BLE Attack Platform</text>
+  <text x="541" y="513" text-anchor="middle" font-size="9" fill="#7c3aed">Wraith v5.0 - ESP32 WiFi/BLE Attack Platform</text>
 </svg>

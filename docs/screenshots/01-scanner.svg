@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+  <defs>
+    <style>* { font-family: 'Segoe UI', system-ui, sans-serif; }</style>
+  </defs>
+  <!-- Background -->
+  <rect width="900" height="520" fill="#0f0f1a"/>
+  <!-- Topbar -->
+  <rect width="900" height="44" fill="#13131f"/>
+  <rect y="44" width="900" height="1" fill="#2d2d44"/>
+  <circle cx="22" cy="22" r="12" fill="#7c3aed" opacity="0.9"/>
+  <text x="22" y="27" text-anchor="middle" font-size="13" fill="white" font-weight="bold">W</text>
+  <text x="42" y="28" font-size="13" font-weight="700" fill="#e2e8f0">Wraith</text>
+  <text x="108" y="28" font-size="10" fill="#7c3aed">v5.0</text>
+  <rect x="600" y="12" width="52" height="20" rx="4" fill="#22c55e14" stroke="#059669" stroke-width="1"/>
+  <circle cx="611" cy="22" r="3" fill="#22c55e"/>
+  <text x="618" y="26" font-size="9" fill="#22c55e" font-weight="600">SNIFFER</text>
+  <text x="800" y="28" font-size="10" fill="#94a3b8">CH:6  RAM:182KB  00:04:12</text>
+  <circle cx="876" cy="22" r="5" fill="#22c55e"/>
+  <!-- Sidebar -->
+  <rect x="0" y="45" width="170" height="475" fill="#111120"/>
+  <rect x="170" y="45" width="1" height="475" fill="#2d2d44"/>
+  <text x="14" y="72" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">RECON</text>
+  <rect x="0" y="80" width="170" height="30" fill="#7c3aed18"/>
+  <rect x="0" y="80" width="2" height="30" fill="#7c3aed"/>
+  <text x="16" y="100" font-size="11" fill="#a78bfa" font-weight="600">◉ WiFi Scanner</text>
+  <text x="16" y="128" font-size="11" fill="#475569">◎ Packet Sniffer</text>
+  <text x="16" y="156" font-size="11" fill="#475569">◎ Probe Requests</text>
+  <text x="16" y="184" font-size="11" fill="#475569">◎ Hidden Scanner</text>
+  <text x="14" y="212" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">ATTACKS</text>
+  <text x="16" y="236" font-size="11" fill="#475569">◎ Auto-Attack</text>
+  <text x="16" y="264" font-size="11" fill="#475569">◎ Deauth</text>
+  <text x="16" y="292" font-size="11" fill="#475569">◎ Evil Twin</text>
+  <text x="16" y="320" font-size="11" fill="#475569">◎ Beacon Flood</text>
+  <text x="16" y="348" font-size="11" fill="#475569">◎ Karma</text>
+  <text x="14" y="376" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">CAPTURE</text>
+  <text x="16" y="400" font-size="11" fill="#475569">◎ PMKID Fisher</text>
+  <text x="16" y="428" font-size="11" fill="#475569">◎ WPS Scanner</text>
+  <text x="16" y="456" font-size="11" fill="#475569">◎ Target Intel</text>
+  <rect x="0" y="472" width="170" height="1" fill="#2d2d44"/>
+  <text x="14" y="490" font-size="10" fill="#475569">SSID: Wraith  |  192.168.4.1</text>
+  <text x="14" y="508" font-size="10" fill="#7c3aed">wraith.local</text>
+  <!-- Main content -->
+  <rect x="186" y="56" width="698" height="448" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <!-- Header bar -->
+  <rect x="186" y="56" width="698" height="42" rx="6" fill="#13131f"/>
+  <rect x="186" y="84" width="698" height="14" fill="#13131f"/>
+  <text x="206" y="82" font-size="12" font-weight="600" fill="#e2e8f0">WiFi Scanner</text>
+  <rect x="554" y="64" width="80" height="26" rx="4" fill="#7c3aed"/>
+  <text x="594" y="82" text-anchor="middle" font-size="10" fill="white" font-weight="600">▶ Scan</text>
+  <rect x="642" y="64" width="90" height="26" rx="4" fill="#05966920" stroke="#059669" stroke-width="1"/>
+  <text x="687" y="82" text-anchor="middle" font-size="10" fill="#22c55e" font-weight="600">↻ Auto-Scan</text>
+  <rect x="740" y="64" width="80" height="26" rx="4" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="780" y="82" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="600">Export CSV</text>
+  <!-- Stats -->
+  <text x="206" y="116" font-size="10" fill="#94a3b8">12 redes encontradas  |  Canal: todos  |  Ultima atualizacao: agora</text>
+  <!-- Table header -->
+  <rect x="186" y="124" width="698" height="24" fill="#0f0f1a"/>
+  <text x="200" y="140" font-size="10" fill="#475569" font-weight="600">SSID</text>
+  <text x="348" y="140" font-size="10" fill="#475569" font-weight="600">BSSID</text>
+  <text x="484" y="140" font-size="10" fill="#475569" font-weight="600">CH</text>
+  <text x="514" y="140" font-size="10" fill="#475569" font-weight="600">RSSI</text>
+  <text x="558" y="140" font-size="10" fill="#475569" font-weight="600">DIST</text>
+  <text x="596" y="140" font-size="10" fill="#475569" font-weight="600">AUTH</text>
+  <text x="646" y="140" font-size="10" fill="#475569" font-weight="600">CLIENTES</text>
+  <text x="718" y="140" font-size="10" fill="#475569" font-weight="600">ACAO</text>
+  <!-- Row 1 - highlighted target -->
+  <rect x="186" y="148" width="698" height="30" fill="#dc262610"/>
+  <rect x="186" y="148" width="2" height="30" fill="#dc2626"/>
+  <text x="200" y="167" font-size="11" fill="#e2e8f0" font-weight="600">NET-Escritorio</text>
+  <text x="348" y="167" font-size="10" fill="#94a3b8">AA:BB:CC:11:22:33</text>
+  <text x="484" y="167" font-size="11" fill="#7c3aed" font-weight="600">6</text>
+  <text x="514" y="167" font-size="11" fill="#22c55e">-42</text>
+  <text x="558" y="167" font-size="10" fill="#22c55e">3m</text>
+  <rect x="592" y="155" width="38" height="16" rx="3" fill="#dc262620" stroke="#dc2626" stroke-width="1"/>
+  <text x="611" y="167" text-anchor="middle" font-size="9" fill="#dc2626" font-weight="600">WPA2</text>
+  <text x="654" y="167" font-size="10" fill="#d97706">4</text>
+  <rect x="714" y="155" width="60" height="18" rx="3" fill="#dc2626"/>
+  <text x="744" y="167" text-anchor="middle" font-size="9" fill="white" font-weight="700">Attack</text>
+  <!-- Row 2 -->
+  <rect x="186" y="178" width="698" height="30" fill="#ffffff05"/>
+  <text x="200" y="197" font-size="11" fill="#e2e8f0">Claro_2G_Home</text>
+  <text x="348" y="197" font-size="10" fill="#94a3b8">DE:AD:BE:EF:01:23</text>
+  <text x="484" y="197" font-size="11" fill="#7c3aed">1</text>
+  <text x="514" y="197" font-size="11" fill="#22c55e">-55</text>
+  <text x="558" y="197" font-size="10" fill="#22c55e">8m</text>
+  <rect x="592" y="185" width="38" height="16" rx="3" fill="#dc262620" stroke="#dc2626" stroke-width="1"/>
+  <text x="611" y="197" text-anchor="middle" font-size="9" fill="#dc2626" font-weight="600">WPA2</text>
+  <text x="654" y="197" font-size="10" fill="#94a3b8">1</text>
+  <rect x="714" y="185" width="60" height="18" rx="3" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="744" y="197" text-anchor="middle" font-size="9" fill="#94a3b8">Attack</text>
+  <!-- Row 3 -->
+  <rect x="186" y="208" width="698" height="30" fill="#0f0f1a"/>
+  <text x="200" y="227" font-size="11" fill="#e2e8f0">VIVO_Fibra_7F2A</text>
+  <text x="348" y="227" font-size="10" fill="#94a3b8">F0:9F:C2:AB:CD:EF</text>
+  <text x="484" y="227" font-size="11" fill="#7c3aed">11</text>
+  <text x="514" y="227" font-size="11" fill="#d97706">-68</text>
+  <text x="558" y="227" font-size="10" fill="#d97706">18m</text>
+  <rect x="592" y="215" width="38" height="16" rx="3" fill="#dc262620" stroke="#dc2626" stroke-width="1"/>
+  <text x="611" y="227" text-anchor="middle" font-size="9" fill="#dc2626" font-weight="600">WPA2</text>
+  <text x="654" y="227" font-size="10" fill="#94a3b8">2</text>
+  <rect x="714" y="215" width="60" height="18" rx="3" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="744" y="227" text-anchor="middle" font-size="9" fill="#94a3b8">Attack</text>
+  <!-- Row 4 WPS -->
+  <rect x="186" y="238" width="698" height="30" fill="#ffffff05"/>
+  <text x="200" y="257" font-size="11" fill="#e2e8f0">TP-Link_Router</text>
+  <text x="348" y="257" font-size="10" fill="#94a3b8">60:A4:4C:12:34:56</text>
+  <text x="484" y="257" font-size="11" fill="#7c3aed">6</text>
+  <text x="514" y="257" font-size="11" fill="#d97706">-71</text>
+  <text x="558" y="257" font-size="10" fill="#d97706">22m</text>
+  <rect x="588" y="245" width="52" height="16" rx="3" fill="#d9780620" stroke="#d97706" stroke-width="1"/>
+  <text x="614" y="257" text-anchor="middle" font-size="9" fill="#d97706" font-weight="600">WPA2+WPS</text>
+  <text x="654" y="257" font-size="10" fill="#94a3b8">0</text>
+  <rect x="714" y="245" width="60" height="18" rx="3" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="744" y="257" text-anchor="middle" font-size="9" fill="#94a3b8">Attack</text>
+  <!-- Row 5 open -->
+  <rect x="186" y="268" width="698" height="30" fill="#0f0f1a"/>
+  <text x="200" y="287" font-size="11" fill="#e2e8f0">HotspotPublico</text>
+  <text x="348" y="287" font-size="10" fill="#94a3b8">00:11:22:33:44:55</text>
+  <text x="484" y="287" font-size="11" fill="#7c3aed">1</text>
+  <text x="514" y="287" font-size="11" fill="#94a3b8">-78</text>
+  <text x="558" y="287" font-size="10" fill="#94a3b8">35m</text>
+  <rect x="592" y="275" width="38" height="16" rx="3" fill="#22c55e20" stroke="#22c55e" stroke-width="1"/>
+  <text x="611" y="287" text-anchor="middle" font-size="9" fill="#22c55e" font-weight="600">OPEN</text>
+  <text x="654" y="287" font-size="10" fill="#94a3b8">7</text>
+  <rect x="714" y="275" width="60" height="18" rx="3" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="744" y="287" text-anchor="middle" font-size="9" fill="#94a3b8">Attack</text>
+  <!-- Row 6 hidden -->
+  <rect x="186" y="298" width="698" height="30" fill="#ffffff05"/>
+  <text x="200" y="317" font-size="11" fill="#64748b" font-style="italic">[hidden]</text>
+  <text x="348" y="317" font-size="10" fill="#94a3b8">B8:27:EB:FF:EE:DD</text>
+  <text x="484" y="317" font-size="11" fill="#7c3aed">13</text>
+  <text x="514" y="317" font-size="11" fill="#94a3b8">-82</text>
+  <text x="558" y="317" font-size="10" fill="#94a3b8">42m</text>
+  <rect x="592" y="305" width="38" height="16" rx="3" fill="#dc262620" stroke="#dc2626" stroke-width="1"/>
+  <text x="611" y="317" text-anchor="middle" font-size="9" fill="#dc2626" font-weight="600">WPA2</text>
+  <text x="654" y="317" font-size="10" fill="#94a3b8">0</text>
+  <rect x="714" y="305" width="60" height="18" rx="3" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="744" y="317" text-anchor="middle" font-size="9" fill="#94a3b8">Attack</text>
+  <!-- Channel map -->
+  <rect x="186" y="340" width="698" height="100" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="206" y="358" font-size="10" fill="#475569" font-weight="600">CANAL MAP</text>
+  <rect x="206" y="366" width="8" height="50" rx="2" fill="#7c3aed" opacity="0.9"/>
+  <text x="210" y="424" text-anchor="middle" font-size="8" fill="#64748b">1</text>
+  <rect x="230" y="376" width="8" height="40" rx="2" fill="#7c3aed" opacity="0.6"/>
+  <text x="234" y="424" text-anchor="middle" font-size="8" fill="#64748b">2</text>
+  <rect x="254" y="390" width="8" height="26" rx="2" fill="#7c3aed" opacity="0.4"/>
+  <text x="258" y="424" text-anchor="middle" font-size="8" fill="#64748b">3</text>
+  <rect x="278" y="402" width="8" height="14" rx="2" fill="#7c3aed" opacity="0.3"/>
+  <text x="282" y="424" text-anchor="middle" font-size="8" fill="#64748b">4</text>
+  <rect x="302" y="386" width="8" height="30" rx="2" fill="#7c3aed" opacity="0.5"/>
+  <text x="306" y="424" text-anchor="middle" font-size="8" fill="#64748b">5</text>
+  <rect x="326" y="362" width="8" height="54" rx="2" fill="#dc2626" opacity="0.9"/>
+  <text x="330" y="424" text-anchor="middle" font-size="8" fill="#94a3b8">6</text>
+  <rect x="350" y="400" width="8" height="16" rx="2" fill="#7c3aed" opacity="0.3"/>
+  <text x="354" y="424" text-anchor="middle" font-size="8" fill="#64748b">7</text>
+  <rect x="374" y="412" width="8" height="4" rx="2" fill="#7c3aed" opacity="0.2"/>
+  <text x="378" y="424" text-anchor="middle" font-size="8" fill="#64748b">8</text>
+  <text x="402" y="416" text-anchor="middle" font-size="8" fill="#2d2d44">-</text>
+  <text x="406" y="424" text-anchor="middle" font-size="8" fill="#64748b">9</text>
+  <text x="430" y="416" text-anchor="middle" font-size="8" fill="#2d2d44">-</text>
+  <text x="434" y="424" text-anchor="middle" font-size="8" fill="#64748b">10</text>
+  <rect x="452" y="378" width="8" height="38" rx="2" fill="#7c3aed" opacity="0.6"/>
+  <text x="456" y="424" text-anchor="middle" font-size="8" fill="#64748b">11</text>
+  <text x="480" y="416" text-anchor="middle" font-size="8" fill="#2d2d44">-</text>
+  <text x="484" y="424" text-anchor="middle" font-size="8" fill="#64748b">12</text>
+  <rect x="500" y="395" width="8" height="21" rx="2" fill="#7c3aed" opacity="0.4"/>
+  <text x="504" y="424" text-anchor="middle" font-size="8" fill="#64748b">13</text>
+  <!-- Quick attack banner -->
+  <rect x="186" y="454" width="698" height="38" rx="4" fill="#dc262610" stroke="#dc262630" stroke-width="1"/>
+  <text x="206" y="472" font-size="11" fill="#94a3b8">Alvo:</text>
+  <text x="238" y="472" font-size="11" fill="#e2e8f0" font-weight="600">NET-Escritorio</text>
+  <text x="380" y="472" font-size="10" fill="#475569">AA:BB:CC:11:22:33  |  CH 6  |  -42 dBm</text>
+  <rect x="688" y="460" width="90" height="24" rx="4" fill="#dc2626"/>
+  <text x="733" y="477" text-anchor="middle" font-size="10" fill="white" font-weight="700">Quick Attack</text>
+  <!-- Footer -->
+  <text x="186" y="514" font-size="9" fill="#2d2d44">Wraith v5.0 - ESP32 Wireless Security Platform</text>
+</svg>

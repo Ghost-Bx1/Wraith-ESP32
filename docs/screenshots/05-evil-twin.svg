@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+  <defs><style>* { font-family: 'Segoe UI', system-ui, sans-serif; }</style></defs>
+  <rect width="900" height="520" fill="#0f0f1a"/>
+  <rect width="900" height="44" fill="#13131f"/>
+  <rect y="44" width="900" height="1" fill="#2d2d44"/>
+  <circle cx="22" cy="22" r="12" fill="#7c3aed" opacity="0.9"/>
+  <text x="22" y="27" text-anchor="middle" font-size="13" fill="white" font-weight="bold">W</text>
+  <text x="42" y="28" font-size="13" font-weight="700" fill="#e2e8f0">Wraith</text>
+  <text x="108" y="28" font-size="10" fill="#7c3aed">v5.0</text>
+  <rect x="560" y="12" width="52" height="20" rx="4" fill="#dc262614" stroke="#dc2626" stroke-width="1"/>
+  <circle cx="571" cy="22" r="3" fill="#dc2626"/>
+  <text x="578" y="26" font-size="9" fill="#dc2626" font-weight="600">DEAUTH</text>
+  <rect x="618" y="12" width="66" height="20" rx="4" fill="#d9780614" stroke="#d97706" stroke-width="1"/>
+  <circle cx="629" cy="22" r="3" fill="#d97706"/>
+  <text x="636" y="26" font-size="9" fill="#d97706" font-weight="600">EVIL TWIN</text>
+  <text x="740" y="28" font-size="10" fill="#94a3b8">CH:6  RAM:160KB  00:17:22</text>
+  <circle cx="876" cy="22" r="5" fill="#22c55e"/>
+  <!-- Sidebar -->
+  <rect x="0" y="45" width="170" height="475" fill="#111120"/>
+  <rect x="170" y="45" width="1" height="475" fill="#2d2d44"/>
+  <text x="14" y="72" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">RECON</text>
+  <text x="16" y="96" font-size="11" fill="#475569">◎ WiFi Scanner</text>
+  <text x="16" y="124" font-size="11" fill="#475569">◎ Packet Sniffer</text>
+  <text x="16" y="152" font-size="11" fill="#475569">◎ Probe Requests</text>
+  <text x="16" y="180" font-size="11" fill="#475569">◎ Hidden Scanner</text>
+  <text x="14" y="208" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">ATTACKS</text>
+  <text x="16" y="232" font-size="11" fill="#475569">◎ Auto-Attack</text>
+  <text x="16" y="260" font-size="11" fill="#475569">◎ Deauth</text>
+  <rect x="0" y="268" width="170" height="30" fill="#d9780618"/>
+  <rect x="0" y="268" width="2" height="30" fill="#d97706"/>
+  <text x="16" y="288" font-size="11" fill="#fbbf24" font-weight="600">◉ Evil Twin</text>
+  <text x="16" y="316" font-size="11" fill="#475569">◎ Beacon Flood</text>
+  <text x="16" y="344" font-size="11" fill="#475569">◎ Karma</text>
+  <text x="14" y="372" font-size="10" fill="#475569" font-weight="600" letter-spacing="1">CAPTURE</text>
+  <text x="16" y="396" font-size="11" fill="#475569">◎ PMKID Fisher</text>
+  <text x="16" y="424" font-size="11" fill="#475569">◎ WPS Scanner</text>
+  <text x="16" y="452" font-size="11" fill="#475569">◎ Target Intel</text>
+  <rect x="0" y="472" width="170" height="1" fill="#2d2d44"/>
+  <text x="14" y="490" font-size="10" fill="#475569">SSID: Wraith  |  192.168.4.1</text>
+  <text x="14" y="508" font-size="10" fill="#7c3aed">wraith.local</text>
+  <!-- Two columns -->
+  <!-- Left: controls -->
+  <rect x="186" y="56" width="390" height="448" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <rect x="186" y="56" width="390" height="42" rx="6" fill="#13131f"/>
+  <rect x="186" y="84" width="390" height="14" fill="#13131f"/>
+  <text x="206" y="82" font-size="12" font-weight="600" fill="#e2e8f0">Evil Twin + Captive Portal</text>
+  <!-- Status badge -->
+  <rect x="434" y="64" width="130" height="26" rx="4" fill="#d9780620" stroke="#d97706" stroke-width="1"/>
+  <circle cx="446" cy="77" r="4" fill="#d97706"/>
+  <text x="460" y="82" font-size="10" fill="#d97706" font-weight="600">ATAQUE ATIVO: 17m22s</text>
+  <!-- Target -->
+  <text x="206" y="116" font-size="10" fill="#475569" font-weight="600">ALVO CLONADO</text>
+  <rect x="206" y="122" width="354" height="40" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="220" y="138" font-size="11" fill="#e2e8f0" font-weight="600">NET-Escritorio</text>
+  <text x="220" y="154" font-size="9" fill="#94a3b8">AA:BB:CC:11:22:33  |  CH 6  |  WPA2 (clone: OPEN)</text>
+  <!-- Phase indicators -->
+  <text x="206" y="184" font-size="10" fill="#475569" font-weight="600">FASES</text>
+  <rect x="206" y="190" width="80" height="28" rx="4" fill="#22c55e20" stroke="#22c55e" stroke-width="1"/>
+  <text x="246" y="208" text-anchor="middle" font-size="9" fill="#22c55e" font-weight="600">1 DEAUTH</text>
+  <text x="294" y="208" font-size="12" fill="#2d2d44">></text>
+  <rect x="306" y="190" width="80" height="28" rx="4" fill="#22c55e20" stroke="#22c55e" stroke-width="1"/>
+  <text x="346" y="208" text-anchor="middle" font-size="9" fill="#22c55e" font-weight="600">2 CLONE AP</text>
+  <text x="394" y="208" font-size="12" fill="#2d2d44">></text>
+  <rect x="406" y="190" width="80" height="28" rx="4" fill="#d9780620" stroke="#d97706" stroke-width="1"/>
+  <text x="446" y="208" text-anchor="middle" font-size="9" fill="#d97706" font-weight="600">3 PORTAL</text>
+  <text x="494" y="208" font-size="12" fill="#2d2d44">></text>
+  <rect x="506" y="190" width="30" height="28" rx="4" fill="#47556930" stroke="#475569" stroke-width="1"/>
+  <text x="521" y="208" text-anchor="middle" font-size="9" fill="#64748b">4</text>
+  <!-- Portal template selector -->
+  <text x="206" y="244" font-size="10" fill="#475569" font-weight="600">TEMPLATE DO PORTAL</text>
+  <rect x="206" y="250" width="110" height="26" rx="4" fill="#7c3aed"/>
+  <text x="261" y="267" text-anchor="middle" font-size="10" fill="white" font-weight="600">WiFi Reconnect</text>
+  <rect x="324" y="250" width="110" height="26" rx="4" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="379" y="267" text-anchor="middle" font-size="10" fill="#94a3b8">ISP / Provedor</text>
+  <rect x="442" y="250" width="110" height="26" rx="4" fill="#1e293b" stroke="#2d2d44" stroke-width="1"/>
+  <text x="497" y="267" text-anchor="middle" font-size="10" fill="#94a3b8">Router Admin</text>
+  <!-- Clients connected -->
+  <text x="206" y="302" font-size="10" fill="#475569" font-weight="600">CLIENTES CONECTADOS AO FAKE AP</text>
+  <rect x="206" y="308" width="354" height="30" rx="3" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="220" y="327" font-size="10" fill="#22c55e">D4:E8:53:AB:CD:12</text>
+  <text x="348" y="327" font-size="9" fill="#94a3b8">Samsung</text>
+  <text x="434" y="327" font-size="9" fill="#d97706">aguardando senha...</text>
+  <rect x="206" y="340" width="354" height="30" rx="3" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="220" y="359" font-size="10" fill="#22c55e">BC:5F:F4:98:76:21</text>
+  <text x="348" y="359" font-size="9" fill="#94a3b8">Apple iPhone</text>
+  <text x="434" y="359" font-size="9" fill="#d97706">aguardando senha...</text>
+  <!-- Log -->
+  <rect x="186" y="380" width="390" height="116" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="206" y="398" font-size="9" fill="#22c55e">[17:22] Clone AP ativo: NET-Escritorio (OPEN)</text>
+  <text x="206" y="414" font-size="9" fill="#d97706">[17:18] Cliente D4:E8:53:... conectou no fake AP</text>
+  <text x="206" y="430" font-size="9" fill="#d97706">[17:15] Cliente BC:5F:F4:... conectou no fake AP</text>
+  <text x="206" y="446" font-size="9" fill="#dc2626">[17:11] Deauth loop ativo - clientes expulsos</text>
+  <text x="206" y="462" font-size="9" fill="#94a3b8">[17:00] Evil Twin iniciado - CH6</text>
+  <!-- Right panel: captured creds -->
+  <rect x="584" y="56" width="300" height="448" rx="6" fill="#1a1a2e" stroke="#2d2d44" stroke-width="1"/>
+  <rect x="584" y="56" width="300" height="42" rx="6" fill="#13131f"/>
+  <rect x="584" y="84" width="300" height="14" fill="#13131f"/>
+  <text x="604" y="82" font-size="12" font-weight="600" fill="#e2e8f0">Credenciais Capturadas</text>
+  <rect x="724" y="64" width="60" height="26" rx="4" fill="#22c55e20" stroke="#22c55e" stroke-width="1"/>
+  <text x="754" y="82" text-anchor="middle" font-size="10" fill="#22c55e" font-weight="600">Export</text>
+  <!-- Cred 1 -->
+  <rect x="600" y="110" width="268" height="80" rx="4" fill="#22c55e10" stroke="#22c55e" stroke-width="1"/>
+  <text x="616" y="128" font-size="9" fill="#22c55e" font-weight="600">CAPTURADO  |  14:17:33</text>
+  <text x="616" y="146" font-size="10" fill="#475569">SSID:</text>
+  <text x="656" y="146" font-size="11" fill="#e2e8f0" font-weight="600">NET-Escritorio</text>
+  <text x="616" y="164" font-size="10" fill="#475569">Senha:</text>
+  <text x="656" y="164" font-size="13" fill="#22c55e" font-weight="700" font-family="monospace">escritorio@2024</text>
+  <text x="616" y="180" font-size="9" fill="#64748b">D4:E8:53:AB:CD:12 (Samsung Galaxy)</text>
+  <!-- Cred 2 -->
+  <rect x="600" y="202" width="268" height="80" rx="4" fill="#22c55e10" stroke="#22c55e" stroke-width="1"/>
+  <text x="616" y="220" font-size="9" fill="#22c55e" font-weight="600">CAPTURADO  |  14:21:07</text>
+  <text x="616" y="238" font-size="10" fill="#475569">SSID:</text>
+  <text x="656" y="238" font-size="11" fill="#e2e8f0" font-weight="600">NET-Escritorio</text>
+  <text x="616" y="256" font-size="10" fill="#475569">Senha:</text>
+  <text x="656" y="256" font-size="13" fill="#22c55e" font-weight="700" font-family="monospace">minerva2024!</text>
+  <text x="616" y="272" font-size="9" fill="#64748b">BC:5F:F4:98:76:21 (Apple iPhone)</text>
+  <!-- Stats -->
+  <rect x="600" y="296" width="80" height="52" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="640" y="322" text-anchor="middle" font-size="22" font-weight="700" fill="#22c55e">2</text>
+  <text x="640" y="340" text-anchor="middle" font-size="9" fill="#64748b">Senhas</text>
+  <rect x="690" y="296" width="80" height="52" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="730" y="322" text-anchor="middle" font-size="22" font-weight="700" fill="#d97706">2</text>
+  <text x="730" y="340" text-anchor="middle" font-size="9" fill="#64748b">Clientes</text>
+  <rect x="780" y="296" width="80" height="52" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="820" y="322" text-anchor="middle" font-size="22" font-weight="700" fill="#94a3b8">1</text>
+  <text x="820" y="340" text-anchor="middle" font-size="9" fill="#64748b">SSID</text>
+  <!-- Stop button -->
+  <rect x="600" y="362" width="260" height="40" rx="4" fill="#dc2626"/>
+  <text x="730" y="387" text-anchor="middle" font-size="12" fill="white" font-weight="700">■ PARAR ATAQUE</text>
+  <rect x="600" y="414" width="260" height="80" rx="4" fill="#0f0f1a" stroke="#2d2d44" stroke-width="1"/>
+  <text x="616" y="432" font-size="10" fill="#475569">Portal ativo em:</text>
+  <text x="616" y="450" font-size="11" fill="#7c3aed" font-family="monospace">http://192.168.4.1</text>
+  <text x="616" y="470" font-size="9" fill="#64748b">DNS wildcard ativo - todas as requisicoes</text>
+  <text x="616" y="486" font-size="9" fill="#64748b">redirecionam para o portal</text>
+</svg>
