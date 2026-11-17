@@ -6,21 +6,6 @@
 
 ---
 
-## Screenshots
-
-| WiFi Scanner | Packet Sniffer |
-|---|---|
-| ![Scanner](docs/screenshots/01-scanner.svg) | ![Sniffer](docs/screenshots/02-packet-sniffer.svg) |
-
-| Deauth Attack | Evil Twin + Captive Portal |
-|---|---|
-| ![Deauth](docs/screenshots/04-deauth.svg) | ![Evil Twin](docs/screenshots/05-evil-twin.svg) |
-
-| Auto-Attack (Wifite) | Karma Attack |
-|---|---|
-| ![Wifite](docs/screenshots/06-wifite.svg) | ![Karma](docs/screenshots/07-karma.svg) |
-
----
 
 ## Table of Contents
 
